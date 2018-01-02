@@ -91,7 +91,7 @@ public:
     return make_pair(ep0, ep1);
   }
 
-  EndPoint alignLastRow(int iRow, int iCol0, int iCol1, int *row, vector<int> &rowGap,
+  EndPoint alignLastRow(int iRow, int iCol0, int iCol1, int rowStart, int *row, vector<int> &rowGap,
     vector<int> &valBestInRow, vector<int> &valBestInCol, const Scoring &sc)
   {
     const int colRev = iCol0 < iCol1 ? 0 : 1;
@@ -103,14 +103,14 @@ public:
 
     EndPoint best;
 
-    int prevColRow = -(1 << 28); //0;
+    int prevColRow = rowStart;
     for (int iCol = iCol0; iCol != iCol1; iCol += colDir) {
       valBestInRow[iRow] = max(valBestInRow[iRow] - sc.k, row[iCol - colDir] - sc.b);
       valBestInCol[iCol] = max(valBestInCol[iCol] - sc.k, row[iCol] - sc.b);
 
       int rGap = valBestInCol[iCol];
       int rNoGap = max(prevColRow + sc.m[x[iRow + rowRev]][y[iCol + colRev]], valBestInRow[iRow]);
-      int r = max(rGap, rNoGap);
+      int r = max(max(rGap, rNoGap), rowStart);
 
       prevColRow = row[iCol];
 
@@ -123,15 +123,26 @@ public:
     return best;
   }
 
-  void alignRec(int iRow0, int iRow1, int iCol0, int iCol1, bool gapStart, bool gapEnd, int *row, vector<int> &valBestInRow,
-    vector<int> &valBestInCol, const Scoring &sc, Alignment &alig)
+  void alignRec(int iRow0, int iRow1, int iCol0, int iCol1, bool gapStart, bool gapEnd,
+    int *row, vector<int> &valBestInRow, vector<int> &valBestInCol, const Scoring &sc, Alignment &alig)
   {
     assert(iRow0 <= iRow1);
     assert(iCol0 <= iCol1);
 
     const int negInf = -(1 << 28);
 
+    const bool startFree = iRow0 == 0 && iCol0 == 0;
+    const bool endFree = iRow1 == ctRow && iCol1 == ctCol;
+
     if (iRow0 == iRow1 || iCol0 == iCol1) {
+      if (startFree) {
+        iRow0 = iRow1;
+        iCol0 = iCol1;
+      }
+      if (endFree) {
+        iRow1 = iRow0;
+        iCol1 = iCol0;
+      }
       if (iCol0 == iCol1) {
         for (int iRow = iRow0; iRow <= iRow1; ++iRow) {
           alig.matches.push_back(Vec2i{ iRow, iCol0 });
@@ -168,10 +179,12 @@ public:
 
     int iMidRow = (iRow0 + iRow1) / 2;
 
-    row[iCol0 - 1] = negInf;
+    // First half forward alignment
+    const int startVal = startFree ? 0 : negInf;
+    row[iCol0 - 1] = startVal;
     row[iCol0] = 0;
     for (int iCol = iCol0 + 1; iCol <= iCol1; ++iCol) {
-      row[iCol] = -(sc.b + (iCol - iCol0 - 1) * sc.k);
+      row[iCol] = max(-(sc.b + (iCol - iCol0 - 1) * sc.k), startVal);
     }
     for (int iRow = iRow0; iRow <= iMidRow; ++iRow) {
       valBestInRow[iRow] = negInf;
@@ -182,24 +195,27 @@ public:
     if (gapStart) {
       valBestInCol[iCol0] = 0;
     }
+    EndPoint bestFwd{ 0, { iRow0, iCol0} };
     if (iRow0 + 1 <= iMidRow - 1) {
-      _align(false, iRow0 + 1, iMidRow - 1, iCol0, iCol1, negInf, row, valBestInRow, valBestInCol, sc);
-    }
-
-    for (int iCol = iCol0; iCol <= iCol1; ++iCol) {
-      rowFwdGap[iCol] = negInf;
+      bestFwd.Add(_align(false, iRow0 + 1, iMidRow - 1, iCol0, iCol1, startVal, row, valBestInRow, valBestInCol, sc));
     }
 
     if (iRow0 != iMidRow) {
-      alignLastRow(iMidRow, iCol0, iCol1, row, rowFwdGap, valBestInRow, valBestInCol, sc);
+      bestFwd.Add(alignLastRow(iMidRow, iCol0, iCol1, startVal, row, rowFwdGap, valBestInRow, valBestInCol, sc));
+    } else {
+      for (int iCol = iCol0; iCol <= iCol1; ++iCol) {
+        rowFwdGap[iCol] = negInf;
+      }
     }
 
 
+    // Last half backward alignment
+    const int endVal = endFree ? 0 : negInf;
     for (int iCol = iCol0; iCol < iCol1; ++iCol) {
-      rowBak[iCol] = -(sc.b + (iCol1 - iCol - 1) * sc.k);
+      rowBak[iCol] = max(-(sc.b + (iCol1 - iCol - 1) * sc.k), endVal);
     }
     rowBak[iCol1] = 0;
-    rowBak[iCol1 + 1] = negInf;
+    rowBak[iCol1 + 1] = endVal;
     for (int iRow = iMidRow; iRow <= iRow1; ++iRow) {
       valBestInRow[iRow] = negInf;
     }
@@ -209,19 +225,21 @@ public:
     if (gapEnd) {
       valBestInCol[iCol1] = 0;
     }
-
+    EndPoint bestBak{ 0, { iRow1, iCol1 } };
     if (iMidRow + 1 <= iRow1 - 1) {
-      _align(true, iRow1 - 1, iMidRow + 1, iCol1, iCol0, negInf, rowBak.data(), valBestInRow, valBestInCol, sc);
-    }
-
-    for (int iCol = iCol0; iCol <= iCol1; ++iCol) {
-      rowBakGap[iCol] = negInf;
+      bestBak.Add(_align(true, iRow1 - 1, iMidRow + 1, iCol1, iCol0, endVal, rowBak.data(), valBestInRow, valBestInCol, sc));
     }
 
     if (iRow1 != iMidRow) {
-      alignLastRow(iMidRow, iCol1, iCol0, rowBak.data(), rowBakGap, valBestInRow, valBestInCol, sc);
+      bestBak.Add(alignLastRow(iMidRow, iCol1, iCol0, endVal, rowBak.data(), rowBakGap, valBestInRow, valBestInCol, sc));
+    } else {
+      for (int iCol = iCol0; iCol <= iCol1; ++iCol) {
+        rowBakGap[iCol] = negInf;
+      }
     }
 
+
+    // Merge two halves
     int iColMax = -1;
     int valMax = negInf;
     bool gap = false;
@@ -242,6 +260,41 @@ public:
       }
     }
 
+
+    // If last half should be discarded
+    if (endFree && bestFwd.val >= valMax && (!startFree || bestFwd.val >= bestBak.val)) {
+      if (startFree) {
+        alig.score = bestFwd.val;
+      }
+      if (bestFwd.val > 0) {
+        alignRec(iRow0, bestFwd.p.x - 1, iCol0, bestFwd.p.y - 1, false, false, row, valBestInRow, valBestInCol, sc, alig);
+      } else {
+        assert(bestFwd.p.x == iRow0 && bestFwd.p.y == iCol0);
+      }
+      alig.matches.push_back(bestFwd.p);
+      return;
+    }
+
+    // If first half should be discarded
+    if (startFree && bestBak.val >= valMax && (!endFree || bestBak.val >= bestFwd.val)) {
+      if (endFree) {
+        alig.score = bestBak.val;
+      }
+      alig.matches.push_back(bestBak.p);
+      if (bestBak.val > 0) {
+        alignRec(bestBak.p.x + 1, iRow1, bestBak.p.y + 1, iCol1, false, false, row, valBestInRow, valBestInCol, sc, alig);
+      } else {
+        assert(bestBak.p.x == iRow1 && bestBak.p.y == iCol1);
+      }
+      return;
+    }
+
+    // If this is the root call
+    if (startFree && endFree) {
+      alig.score = valMax;
+    }
+
+    // Reconstruct recursively
     if (gap) {
       alignRec(iRow0, iMidRow - 1, iCol0, iColMax, gapStart, true, row, valBestInRow, valBestInCol, sc, alig);
       alig.matches.emplace_back(Vec2i{ iMidRow, iColMax });
@@ -267,18 +320,17 @@ public:
     vector<int> valBestInRow(ctRow + 1, negInf);
     vector<int> valBestInCol(ctCol + 1, negInf);
 
-    auto eps = findEndPoints(row.data(), valBestInRow, valBestInCol, sc);
-    const EndPoint ep0 = eps.first;
-    const EndPoint ep1 = eps.second;
-    assert(ep0.val == ep1.val);
+    //auto eps = findEndPoints(row.data(), valBestInRow, valBestInCol, sc);
+    //const EndPoint ep0 = eps.first;
+    //const EndPoint ep1 = eps.second;
+    //assert(ep0.val == ep1.val);
 
     rowFwdGap.resize(ctCol + 1);
     rowBak.resize(ctCol + 2);
     rowBakGap.resize(ctCol + 2);
 
     Alignment sol;
-    sol.score = ep0.val;
-    alignRec(ep0.p.x, ep1.p.x, ep0.p.y, ep1.p.y, false, false, row.data() + 1, valBestInRow, valBestInCol, sc, sol);
+    alignRec(0, ctRow, 0, ctCol, false, false, row.data() + 1, valBestInRow, valBestInCol, sc, sol);
     sol.compress();
     return sol;
 

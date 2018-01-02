@@ -28,7 +28,7 @@ void test(const char *file, int i1, int i2)
   }
   fi.close();
 
-  int cutoff = 1000;
+  int cutoff = 30000;
   for (auto &s : vs) {
     s = s.substr(0, cutoff);
   }
@@ -38,16 +38,19 @@ void test(const char *file, int i1, int i2)
   //NaiveCubeAA algo;
   Scoring sc;
 
+  cout << "TEST: " << file << ' ' << i1 << ' ' << i2 << endl;
+
   int start = clock();
   Alignment sol = algo.align(vs[i1], vs[i2], sc);
   float runTimeAlg = (float)(clock() - start) / CLOCKS_PER_SEC;
   //cout << "Run time: " << (float)(clock() - start) / CLOCKS_PER_SEC << endl;
   const int validationScore = sol.calcScore(vs[i1], vs[i2], sc);
-  if (validationScore != sol.score) {
-    cout << "VALIDATION FAILED: " << file << ' ' << i1 << ' ' << i2 << endl;
+  if (validationScore != sol.score) { 
+    cout << "VALIDATION FAILED!" << endl;
     cout << "Score should be: " << validationScore << endl;
     sol.output(cout, vs[i1], vs[i2]);
   }
+  cout << "Runtime algo:   " << runTimeAlg << endl;
 
   //sol.output(cout, vs[i1], vs[i2]);
 
@@ -62,15 +65,14 @@ void test(const char *file, int i1, int i2)
   //  sol2.output(cout, vs[i1], vs[i2]);
   //}
 
+  cout << "Runtime square: " << runTimeSq << endl;
   if (sol.score != sol2.score) {
-    cout << "FAILED: " << file << ' ' << i1 << ' ' << i2 << endl;
+    cout << "FAILED!" << endl;
     cout << "H: " << sol.score << endl;
     sol2.output(cout, vs[i1], vs[i2]);
   } else {
-    cout << "OK: " << file << ' ' << i1 << ' ' << i2 << endl;
+    cout << "OK!" << endl;
   }
-  cout << "Runtime algo:   " << runTimeAlg << endl;
-  cout << "Runtime square: " << runTimeSq << endl;
   cout << endl;
 }
 
@@ -92,6 +94,10 @@ int main()
   test("res/test.fasta", 15, 14);
   test("res/test.fasta", 16, 17);
   test("res/test.fasta", 18, 18);
+  test("res/test.fasta", 19, 20);
+  test("res/test.fasta", 20, 19);
+  test("res/test.fasta", 21, 22);
+  test("res/test.fasta", 23, 24);
   test("res/streptococcus_references.fasta", 0, 1);
 
   system("pause");
