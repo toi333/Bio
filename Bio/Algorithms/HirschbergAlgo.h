@@ -5,17 +5,22 @@
 #include <algorithm>
 #include <iostream>
 #include <cassert>
+#include <thread>
+#include <atomic>
+#include <functional>
 
 class HirschbergAA : public AlignmentAlgorithm
 {
 public:
+  static const int ctThreads = 8;
+
   vector<char> x, y;
   int ctRow, ctCol;
 
   vector<int> rowFwdGap;
   vector<int> rowBak;
   vector<int> rowBakGap;
-
+  
   struct EndPoint
   {
     int val = -1;
@@ -37,9 +42,26 @@ public:
     }
   };
 
-  // TODO: local instead of rowStart?
-  EndPoint _align(bool rev, int iRow0, int iRow1, int iCol0, int iCol1, int rowStart, int *row, vector<int> &valBestInRow, vector<int> &valBestInCol,
-    const Scoring &sc)
+  struct ThreadData {
+    ThreadData() {}
+    ThreadData(ThreadData &td) {}
+    vector<int> _col;
+    int *col;
+    vector<int> valBestInColLocal;
+    vector<int> rowLocal;
+    atomic<int> iRow;
+    EndPoint best;
+    function<void(void)> f = nullptr;
+    atomic<int> go = false;
+    atomic<int> die = false;
+  };
+  vector<ThreadData> tds;
+
+  vector<thread> ts;
+
+
+  EndPoint _alignSingleThread(bool rev, int iRow0, int iRow1, int iCol0, int iCol1, int rowStart, int *row,
+    vector<int> &valBestInRow, vector<int> &valBestInCol, const Scoring &sc)
   {
     const int dir = rev ? -1 : 1;
 
@@ -51,44 +73,122 @@ public:
     for (int iRow = iRow0; iRow != iRow1; iRow += dir) {
       int prevColRow = row[iCol0 - dir];
       row[iCol0 - dir] = rowStart;
+      int valBestInRowLocal = valBestInRow[iRow];
       for (int iCol = iCol0; iCol != iCol1; iCol += dir) {
         int r = rowStart;
 
-        valBestInRow[iRow] = max(valBestInRow[iRow] - sc.k, row[iCol - dir] - sc.b);
+        valBestInRowLocal = max(valBestInRowLocal - sc.k, row[iCol - dir] - sc.b);
         valBestInCol[iCol] = max(valBestInCol[iCol] - sc.k, row[iCol] - sc.b);
 
-        r = max(r, valBestInRow[iRow]);
+        r = max(r, valBestInRowLocal);
         r = max(r, valBestInCol[iCol]);
 
-        r = max(r, prevColRow + sc.m[x[iRow + rev]][y[iCol + rev]]);
+        r = max(r, prevColRow + sc.match(x[iRow + rev], y[iCol + rev]));
 
         prevColRow = row[iCol];
         row[iCol] = r;
 
         best.Add(r, Vec2i{ iRow, iCol });
       }
+      valBestInRow[iRow] = valBestInRowLocal;
     }
 
     return best;
   }
-  
-  pair<EndPoint, EndPoint> findEndPoints(int *row, vector<int> &valBestInRow, vector<int> &valBestInCol, const Scoring &sc)
+
+  EndPoint _align(bool rev, int iRow0, int iRow1, int iCol0, int iCol1, int rowStart, int *row,
+    vector<int> &valBestInRow, vector<int> &valBestInCol, const Scoring &sc)
   {
-    EndPoint ep1 = _align(false, 1, ctRow, 1, ctCol, 0, row, valBestInRow, valBestInCol, sc);
-    if (ep1.val <= 0) {
-      return make_pair(EndPoint{ 0, Vec2i{ 0, 0 } }, EndPoint{ 0, Vec2i{ 0, 0 } });
-    }
-    // TODO check
-    memset(row, 0, (ctCol + 2) * sizeof(int));
-    for (int &v : valBestInRow) {
-      v = -(1 << 28);
-    }
-    for (int &v : valBestInCol) {
-      v = -(1 << 28);
+#if 0
+    return _alignSingleThread(rev, iRow0, iRow1, iCol0, iCol1, rowStart, row, valBestInRow, valBestInCol, sc);
+#else
+    if (abs(iRow1 - iRow0) < 32 || abs(iRow1 - iRow0) < 32) {
+      return _alignSingleThread(rev, iRow0, iRow1, iCol0, iCol1, rowStart, row, valBestInRow, valBestInCol, sc);
     }
 
-    EndPoint ep0 = _align(true, ep1.p.x - 1, 0, ep1.p.y - 1, 0, 0, row, valBestInRow, valBestInCol, sc);
-    return make_pair(ep0, ep1);
+    const int dir = rev ? -1 : 1;
+    tds[0].col[iRow0 - dir] = row[iCol0 - dir];
+    for (int iRow = iRow0; iRow != iRow1 + dir; iRow += dir) {
+      tds[0].col[iRow] = rowStart;
+    }
+    tds[0].iRow = iRow1;
+
+    for (int iThread = 1; iThread <= ctThreads; ++iThread) {
+      tds[iThread].iRow = iRow0 - dir;
+      tds[iThread].best = EndPoint{};
+    }
+
+    for (int iThread = 1; iThread <= ctThreads; ++iThread) {
+      tds[iThread].f = [iThread, rev, iRow0, iRow1, iCol0, iCol1,
+        rowStart, row, &valBestInRow, &valBestInCol, &sc, this]()
+      {
+        EndPoint best;
+
+        const int dir = rev ? -1 : 1;
+
+        int iThCol0 = iCol0 + (iCol1 - iCol0) * (iThread - 1) / ctThreads;
+        int iThCol1 = iCol0 + (iCol1 - iCol0) * iThread / ctThreads - (iThread == ctThreads ? 0 : dir);
+
+        int iThRow0 = iRow0;
+        int iThRow1 = iRow1 + dir;
+        iThCol1 += dir;
+
+        const int cpyStart = min(iThCol0, iThCol1 - dir);
+        const int cpySize = abs(iThCol1 - iThCol0) * sizeof(int);
+
+        int *valBestInColLocal = tds[iThread].valBestInColLocal.data();
+        memcpy(valBestInColLocal + cpyStart, valBestInCol.data() + cpyStart, cpySize);
+
+        int *rowLocal = tds[iThread].rowLocal.data();
+        memcpy(rowLocal + cpyStart, row + cpyStart, cpySize);
+
+        tds[iThread].col[iThRow0 - dir] = rowLocal[iThCol1 - dir];
+        for (int iRow = iThRow0; iRow != iThRow1; iRow += dir) {
+          while (dir * tds[iThread - 1].iRow < dir * iRow) {
+            this_thread::yield();
+          }
+          int prevColRow = tds[iThread - 1].col[iRow - dir];
+          int prevCol = tds[iThread - 1].col[iRow];
+
+          int valBestInRowLocal = valBestInRow[iRow];
+          for (int iCol = iThCol0; iCol != iThCol1; iCol += dir) {
+            int r = rowStart;
+
+            const int prevRow = rowLocal[iCol];
+
+            valBestInRowLocal = max(valBestInRowLocal - sc.k, prevCol - sc.b);
+            valBestInColLocal[iCol] = max(valBestInColLocal[iCol] - sc.k, prevRow - sc.b);
+
+            r = max(r, valBestInRowLocal);
+            r = max(r, valBestInColLocal[iCol]);
+
+            r = max(r, prevColRow + sc.match(x[iRow + rev], y[iCol + rev]));
+
+            prevColRow = prevRow;
+            rowLocal[iCol] = r;
+            prevCol = r;
+
+            best.Add(r, Vec2i{ iRow, iCol });
+          }
+          valBestInRow[iRow] = valBestInRowLocal;
+          tds[iThread].col[iRow] = rowLocal[iThCol1 - dir];
+          tds[iThread].iRow = iRow;
+        }
+        memcpy(valBestInCol.data() + cpyStart, valBestInColLocal + cpyStart, cpySize);
+        memcpy(row + cpyStart, rowLocal + cpyStart, cpySize);
+        tds[iThread].best.Add(best);
+      };
+      tds[iThread].go = 1;
+    }
+    EndPoint r;
+    for (int iThread = 1; iThread <= ctThreads; ++iThread) {
+      while (tds[iThread].go) {
+        this_thread::yield();
+      }
+      r.Add(tds[iThread].best);
+    }
+    return r;
+#endif
   }
 
   EndPoint alignLastRow(int iRow, int iCol0, int iCol1, int rowStart, int *row, vector<int> &rowGap,
@@ -310,8 +410,8 @@ public:
     x = encode(a);
     y = encode(b);
 
-    ctRow = a.size();
-    ctCol = b.size();
+    ctRow = (int)a.size();
+    ctCol = (int)b.size();
 
     vector<int> row(ctCol + 3, 0);
 
@@ -320,70 +420,41 @@ public:
     vector<int> valBestInRow(ctRow + 1, negInf);
     vector<int> valBestInCol(ctCol + 1, negInf);
 
-    //auto eps = findEndPoints(row.data(), valBestInRow, valBestInCol, sc);
-    //const EndPoint ep0 = eps.first;
-    //const EndPoint ep1 = eps.second;
-    //assert(ep0.val == ep1.val);
-
     rowFwdGap.resize(ctCol + 1);
     rowBak.resize(ctCol + 2);
     rowBakGap.resize(ctCol + 2);
 
+    tds.resize(ctThreads + 1);
+    for (auto &td : tds) {
+      td._col.resize(ctRow + 3);
+      td.col = td._col.data() + 1;
+      td.valBestInColLocal.resize(ctCol + 1);
+      td.rowLocal.resize(ctCol + 1);
+    }
+
+    ts.resize(ctThreads + 1);
+    for (int iThread = 1; iThread <= ctThreads; ++iThread) {
+      ts[iThread] = thread([iThread, this]() {
+        while (!tds[iThread].die) {
+          if (tds[iThread].go) {
+            tds[iThread].f();
+            tds[iThread].go = 0;
+          } else {
+            this_thread::yield();
+          }
+        }
+      });
+    }
+
     Alignment sol;
     alignRec(0, ctRow, 0, ctCol, false, false, row.data() + 1, valBestInRow, valBestInCol, sc, sol);
+    for (int iThread = 1; iThread <= ctThreads; ++iThread) {
+      tds[iThread].die = 1;
+    }
+    for (int iThread = 1; iThread <= ctThreads; ++iThread) {
+      ts[iThread].join();
+    }
     sol.compress();
     return sol;
-
-    //EndPoint best;
-
-    //int iMidRow = (ep0.p.x + ep1.p.x) / 2;
-
-
-    //for (int &v : row) {
-    //  v = negInf;
-    //}
-    //row[ep0.p.y] = 0;
-    //for (int &v : valBestInRow) {
-    //  v = negInf;
-    //}
-    //for (int &v : valBestInCol) {
-    //  v = negInf;
-    //}
-    //if (iMidRow != ep0.p.x) {
-    //  best.Add(_align(ep0.p.x + 1, iMidRow - 1, ep0.p.y + 1, ep1.p.y, negInf, row, valBestInRow, valBestInCol, sc));
-    //}
-
-    //vector<int> rowFwdGap(ctCol + 1, negInf);
-
-    //best.Add(alignLastRow(iMidRow, ep0.p.y + 1, ep1.p.y, row, rowFwdGap, valBestInRow, valBestInCol, sc));
-
-
-    //vector<int> rowBak(ctCol + 2, negInf);
-    //rowBak[ep1.p.y] = 0;
-    //for (int &v : valBestInRow) {
-    //  v = negInf;
-    //}
-    //for (int &v : valBestInCol) {
-    //  v = negInf;
-    //}
-
-    //if (ep1.p.x != iMidRow) {
-    //  best.Add(_align(ep1.p.x - 1, iMidRow + 1, ep1.p.y - 1, ep0.p.y, negInf, rowBak, valBestInRow, valBestInCol, sc));
-    //}
-
-    //vector<int> rowBakGap(ctCol + 2, negInf);
-
-    //best.Add(alignLastRow(iMidRow, ep1.p.y - 1, ep0.p.y, rowBak, rowBakGap, valBestInRow, valBestInCol, sc));
-
-
-    //for (int iCol = ep0.p.y; iCol <= ep1.p.y; ++iCol) {
-    //  int r = row[iCol] + rowBak[iCol];
-    //  r = max(r, rowFwdGap[iCol] + rowBakGap[iCol] + sc.b - sc.k);
-    //  best.Add(r, Vec2i{ iMidRow, iCol });
-    //}
-
-    //Alignment sol;
-    //sol.score = best.val;
-    //return sol;
   }
 };

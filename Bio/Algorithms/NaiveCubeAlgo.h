@@ -10,8 +10,8 @@ public:
     vector<char> x = encode(a);
     vector<char> y = encode(b);
 
-    int xn = a.size();
-    int yn = b.size();
+    int xn = (int)a.size();
+    int yn = (int)b.size();
 
     Mat2i dp;
     Mat2i dpr;

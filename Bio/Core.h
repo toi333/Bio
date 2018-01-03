@@ -46,6 +46,10 @@ public:
   static const int mn = -100;
   static const int ni = -(1 << 28);
 
+  int match(int a, int b) const {
+    return a == b ? mp : mn;
+  }
+
   int m[5][5] = {
     { mp, mn, mn, mn, ni },
     { mn, mp, mn, mn, ni },

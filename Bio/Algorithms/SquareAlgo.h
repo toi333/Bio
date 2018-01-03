@@ -10,8 +10,8 @@ public:
     vector<char> x = encode(a);
     vector<char> y = encode(b);
 
-    int ctRow = a.size();
-    int ctCol = b.size();
+    int ctRow = (int)a.size();
+    int ctCol = (int)b.size();
 
     Mat2i dp;
     Mat2i dpr;
