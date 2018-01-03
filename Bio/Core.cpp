@@ -110,7 +110,7 @@ int Alignment::calcScore(const string &a, const string &b, const Scoring &sc) co
         cerr << "FAIL" << endl;
         return -1;
       }
-      validationScore += sc.m[x[cur.x]][y[cur.y]];
+      validationScore += sc.match(x[cur.x], y[cur.y]);
     } else {
       validationScore -= sc.b + sc.k * (max(cur.x - prev.x, cur.y - prev.y) - 1);
     }

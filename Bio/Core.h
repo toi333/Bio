@@ -41,25 +41,25 @@ typedef Mat2<int> Mat2i;
 class Scoring
 {
 public:
-  static const int mp = 3;
-  //static const int mn = -4;
-  static const int mn = -100;
-  static const int ni = -(1 << 28);
+  const int mp = 3;
+  //const int mn = -4;
+  const int mn = -100;
+  const int ni = -(1 << 28);
 
   int match(int a, int b) const {
     return a == b ? mp : mn;
   }
 
-  int m[5][5] = {
-    { mp, mn, mn, mn, ni },
-    { mn, mp, mn, mn, ni },
-    { mn, mn, mp, mn, ni },
-    { mn, mn, mn, mp, ni },
-    { ni, ni, ni, ni, ni },
-  };
+  //int m[5][5] = {
+  //  { mp, mn, mn, mn, ni },
+  //  { mn, mp, mn, mn, ni },
+  //  { mn, mn, mp, mn, ni },
+  //  { mn, mn, mn, mp, ni },
+  //  { ni, ni, ni, ni, ni },
+  //};
 
-  int k = 1;
-  int b = 4;
+  const int k = 1;
+  const int b = 4;
 };
 
 class Alignment {

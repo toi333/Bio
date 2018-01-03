@@ -45,7 +45,7 @@ public:
           }
         }
 
-        int mr = dp[Vec2i{ iRow - 1, iCol - 1 }] + sc.m[x[iRow]][y[iCol]];
+        int mr = dp[Vec2i{ iRow - 1, iCol - 1 }] + sc.match(x[iRow], y[iCol]);
         if (mr > r) {
           r = mr;
           ri = 0;

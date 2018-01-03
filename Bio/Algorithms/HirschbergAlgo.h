@@ -43,12 +43,17 @@ public:
   };
 
   struct ThreadData {
+    struct RowData {
+      int row;
+      int valBestInCol;
+      char y;
+    };
+
     ThreadData() {}
     ThreadData(ThreadData &td) {}
     vector<int> _col;
     int *col;
-    vector<int> valBestInColLocal;
-    vector<int> rowLocal;
+    vector<RowData> localRowData;
     atomic<int> iRow;
     EndPoint best;
     function<void(void)> f = nullptr;
@@ -122,6 +127,7 @@ public:
       tds[iThread].f = [iThread, rev, iRow0, iRow1, iCol0, iCol1,
         rowStart, row, &valBestInRow, &valBestInCol, &sc, this]()
       {
+        const Scoring scLocal = sc;
         EndPoint best;
 
         const int dir = rev ? -1 : 1;
@@ -134,15 +140,16 @@ public:
         iThCol1 += dir;
 
         const int cpyStart = min(iThCol0, iThCol1 - dir);
-        const int cpySize = abs(iThCol1 - iThCol0) * sizeof(int);
+        const int cpyCount = abs(iThCol1 - iThCol0);
 
-        int *valBestInColLocal = tds[iThread].valBestInColLocal.data();
-        memcpy(valBestInColLocal + cpyStart, valBestInCol.data() + cpyStart, cpySize);
+        auto *localRowData = tds[iThread].localRowData.data();
+        for (int iCol = cpyStart; iCol < cpyStart + cpyCount; ++iCol) {
+          localRowData[iCol].row = row[iCol];
+          localRowData[iCol].valBestInCol = valBestInCol[iCol];
+          localRowData[iCol].y = y[iCol + rev];
+        }
 
-        int *rowLocal = tds[iThread].rowLocal.data();
-        memcpy(rowLocal + cpyStart, row + cpyStart, cpySize);
-
-        tds[iThread].col[iThRow0 - dir] = rowLocal[iThCol1 - dir];
+        tds[iThread].col[iThRow0 - dir] = localRowData[iThCol1 - dir].row;
         for (int iRow = iThRow0; iRow != iThRow1; iRow += dir) {
           while (dir * tds[iThread - 1].iRow < dir * iRow) {
             this_thread::yield();
@@ -150,32 +157,37 @@ public:
           int prevColRow = tds[iThread - 1].col[iRow - dir];
           int prevCol = tds[iThread - 1].col[iRow];
 
+          const char xLocal = x[iRow + rev];
           int valBestInRowLocal = valBestInRow[iRow];
           for (int iCol = iThCol0; iCol != iThCol1; iCol += dir) {
             int r = rowStart;
 
-            const int prevRow = rowLocal[iCol];
+            auto &lrd = localRowData[iCol];
 
-            valBestInRowLocal = max(valBestInRowLocal - sc.k, prevCol - sc.b);
-            valBestInColLocal[iCol] = max(valBestInColLocal[iCol] - sc.k, prevRow - sc.b);
+            const int prevRow = lrd.row;
+
+            valBestInRowLocal = max(valBestInRowLocal - scLocal.k, prevCol - scLocal.b);
+            lrd.valBestInCol = max(lrd.valBestInCol - scLocal.k, prevRow - scLocal.b);
 
             r = max(r, valBestInRowLocal);
-            r = max(r, valBestInColLocal[iCol]);
+            r = max(r, lrd.valBestInCol);
 
-            r = max(r, prevColRow + sc.match(x[iRow + rev], y[iCol + rev]));
+            r = max(r, prevColRow + scLocal.match(xLocal, lrd.y));
 
             prevColRow = prevRow;
-            rowLocal[iCol] = r;
+            lrd.row = r;
             prevCol = r;
 
             best.Add(r, Vec2i{ iRow, iCol });
           }
           valBestInRow[iRow] = valBestInRowLocal;
-          tds[iThread].col[iRow] = rowLocal[iThCol1 - dir];
+          tds[iThread].col[iRow] = localRowData[iThCol1 - dir].row;
           tds[iThread].iRow = iRow;
         }
-        memcpy(valBestInCol.data() + cpyStart, valBestInColLocal + cpyStart, cpySize);
-        memcpy(row + cpyStart, rowLocal + cpyStart, cpySize);
+        for (int iCol = cpyStart; iCol < cpyStart + cpyCount; ++iCol) {
+          row[iCol] = localRowData[iCol].row;
+          valBestInCol[iCol] = localRowData[iCol].valBestInCol;
+        }
         tds[iThread].best.Add(best);
       };
       tds[iThread].go = 1;
@@ -209,7 +221,7 @@ public:
       valBestInCol[iCol] = max(valBestInCol[iCol] - sc.k, row[iCol] - sc.b);
 
       int rGap = valBestInCol[iCol];
-      int rNoGap = max(prevColRow + sc.m[x[iRow + rowRev]][y[iCol + colRev]], valBestInRow[iRow]);
+      int rNoGap = max(prevColRow + sc.match(x[iRow + rowRev], y[iCol + colRev]), valBestInRow[iRow]);
       int r = max(max(rGap, rNoGap), rowStart);
 
       prevColRow = row[iCol];
@@ -428,8 +440,7 @@ public:
     for (auto &td : tds) {
       td._col.resize(ctRow + 3);
       td.col = td._col.data() + 1;
-      td.valBestInColLocal.resize(ctCol + 1);
-      td.rowLocal.resize(ctCol + 1);
+      td.localRowData.resize(ctCol + 2);
     }
 
     ts.resize(ctThreads + 1);
