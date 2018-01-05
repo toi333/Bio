@@ -36,6 +36,27 @@ public:
   }
 };
 
+struct EndPoint
+{
+  int val = -1;
+  Vec2i p;
+
+  bool Add(int val, Vec2i p)
+  {
+    return Add(EndPoint{ val, p });
+  }
+
+  bool Add(EndPoint ep)
+  {
+    if (ep.val > val) {
+      val = ep.val;
+      p = ep.p;
+      return true;
+    }
+    return false;
+  }
+};
+
 typedef Mat2<int> Mat2i;
 
 class Scoring

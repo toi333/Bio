@@ -14,6 +14,8 @@
 
 using namespace std;
 
+extern int testcuda();
+
 void test(const char *file, int i1, int i2)
 {
   ifstream fi(file);
@@ -28,7 +30,7 @@ void test(const char *file, int i1, int i2)
   }
   fi.close();
 
-  int cutoff = 100000;
+  int cutoff = 50000;
   for (auto &s : vs) {
     s = s.substr(0, cutoff);
   }
@@ -70,6 +72,8 @@ void test(const char *file, int i1, int i2)
 int main()
 {
   init();
+
+  testcuda();
 
   //test("res/test.fasta", 0, 0);
   //test("res/test.fasta", 0, 1);

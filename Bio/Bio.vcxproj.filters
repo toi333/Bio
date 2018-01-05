@@ -34,5 +34,8 @@
     <ClInclude Include="Algorithms\HirschbergAlgo.h">
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
+    <ClInclude Include="Algorithms\MultithreadedAligner.h">
+      <Filter>Source Files\Algorithms</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
