@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Core.h>
+#include <Base/Core.h>
 
 class NaiveCubeAA : public AlignmentAlgorithm
 {

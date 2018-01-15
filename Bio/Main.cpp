@@ -7,10 +7,10 @@
 #include <string>
 #include <ctime>
 
-#include <Core.h>
-#include <Algorithms/NaiveCubeAlgo.h>
-#include <Algorithms/HirschbergAlgo.h>
-#include <Algorithms/SquareAlgo.h>
+#include <Base/Core.h>
+#include <Bio/Algorithms/NaiveCubeAlgo.h>
+#include <Bio/Algorithms/HirschbergAlgo.h>
+#include <Bio/Algorithms/SquareAlgo.h>
 
 using namespace std;
 
