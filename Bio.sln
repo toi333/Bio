@@ -5,10 +5,16 @@ VisualStudioVersion = 15.0.26430.16
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Bio", "Bio\Bio.vcxproj", "{FE1C73E9-30B5-4335-B142-7EB4C545E082}"
 	ProjectSection(ProjectDependencies) = postProject
+		{D5A740E8-4A37-4F82-AC3A-89E35C57A34B} = {D5A740E8-4A37-4F82-AC3A-89E35C57A34B}
 		{1F54ADFB-E089-4F8A-BA56-C972DB2B290E} = {1F54ADFB-E089-4F8A-BA56-C972DB2B290E}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CudaAligner", "CudaAligner\CudaAligner.vcxproj", "{1F54ADFB-E089-4F8A-BA56-C972DB2B290E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{D5A740E8-4A37-4F82-AC3A-89E35C57A34B} = {D5A740E8-4A37-4F82-AC3A-89E35C57A34B}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Base", "Base\Base.vcxproj", "{D5A740E8-4A37-4F82-AC3A-89E35C57A34B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -32,6 +38,14 @@ Global
 		{1F54ADFB-E089-4F8A-BA56-C972DB2B290E}.Release|x64.ActiveCfg = Release|x64
 		{1F54ADFB-E089-4F8A-BA56-C972DB2B290E}.Release|x64.Build.0 = Release|x64
 		{1F54ADFB-E089-4F8A-BA56-C972DB2B290E}.Release|x86.ActiveCfg = Release|x64
+		{D5A740E8-4A37-4F82-AC3A-89E35C57A34B}.Debug|x64.ActiveCfg = Debug|x64
+		{D5A740E8-4A37-4F82-AC3A-89E35C57A34B}.Debug|x64.Build.0 = Debug|x64
+		{D5A740E8-4A37-4F82-AC3A-89E35C57A34B}.Debug|x86.ActiveCfg = Debug|Win32
+		{D5A740E8-4A37-4F82-AC3A-89E35C57A34B}.Debug|x86.Build.0 = Debug|Win32
+		{D5A740E8-4A37-4F82-AC3A-89E35C57A34B}.Release|x64.ActiveCfg = Release|x64
+		{D5A740E8-4A37-4F82-AC3A-89E35C57A34B}.Release|x64.Build.0 = Release|x64
+		{D5A740E8-4A37-4F82-AC3A-89E35C57A34B}.Release|x86.ActiveCfg = Release|Win32
+		{D5A740E8-4A37-4F82-AC3A-89E35C57A34B}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

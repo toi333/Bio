@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Core.h>
-#include <Algorithms/MultithreadedAligner.h>
+#include <Base/Core.h>
+#include <Bio/Algorithms/MultithreadedAligner.h>
 
 #include <algorithm>
 #include <iostream>
