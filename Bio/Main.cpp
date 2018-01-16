@@ -96,18 +96,18 @@ int main()
   //test("res/test.fasta", 20, 19);
   //test("res/test.fasta", 21, 22);
   //test("res/test.fasta", 23, 24);
-  test("res/streptococcus_references.fasta", 0, 1);
+  //test("res/streptococcus_references.fasta", 0, 1);
 
-  //for (int l = 10; l < 1000; ++l) {
-  //    for (int t = 0; t < 10; ++t) {
-  //        string s1, s2;
-  //        for (int i = 0; i < l; ++i) {
-  //            s1.push_back("ACTG"[rand() % 4]);
-  //            s2.push_back("ACTG"[rand() % 4]);
-  //        }
-  //        test(s1, s2);
-  //    }
-  //}
+  for (int l = 10; l < 1000; ++l) {
+      for (int t = 0; t < 10; ++t) {
+          string s1, s2;
+          for (int i = 0; i < l; ++i) {
+              s1.push_back("ACTG"[rand() % 4]);
+              s2.push_back("ACTG"[rand() % 4]);
+          }
+          test(s1, s2);
+      }
+  }
 
   system("pause");
 }

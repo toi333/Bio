@@ -73,6 +73,8 @@ public:
 
     //EndPoint caBest = ca._alignCuda(rev, iRow0, iRow1, iCol0, iCol1, rowStart, row, valBestInRow, valBestInCol, x, y, sc);
 
+    //return caBest;
+
     //vector<int> rowCuda;
     //for (int iCol = iCol0 - dir; iCol != iCol1 + dir; iCol += dir) {
     //    rowCuda.push_back(row[iCol]);
@@ -81,8 +83,6 @@ public:
     //for (int iCol = iCol0; iCol != iCol1 + dir; iCol += dir) {
     //    valBestInColCuda.push_back(valBestInCol[iCol]);
     //}
-
-    ////return caBest;
 
     //for (int iCol = iCol0 - dir, j = 0; iCol != iCol1 + dir; iCol += dir, ++j) {
     //    row[iCol] = rowCopy[j];
@@ -105,7 +105,7 @@ public:
     //assert(stBest.p.y == caBest.p.y);
 
     //return stBest;
-#if 0
+#if 1
     return _alignSingleThread(rev, iRow0, iRow1, iCol0, iCol1, rowStart, row, valBestInRow, valBestInCol, sc);
 #else
     if (abs(iRow0 - iRow1) < 32 || abs(iCol0 - iCol1) < 32) {

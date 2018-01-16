@@ -1,5 +1,7 @@
 #include <CudaAligner/CudaAligner.h>
 
+#include <CudaAligner/Util.h>
+
 #include <cuda_runtime.h>
 
 #include <iostream>
@@ -8,16 +10,6 @@
 static const int ctThreadsPerBlock = 1024;
 
 extern int callKernel(bool rev, int iRow0, int iRow1, int iCol0, int iCol1, int defVal, CudaAligner *ca, const Scoring &sc);
-
-#define CUDA_CHECK(x) cudaCheck(x, __FILE__, __LINE__, #x)
-
-void cudaCheck(cudaError_t status, const char *file, int line, const char *lineStr) {
-    if (status != cudaSuccess) {
-        cerr << "Cuda error: " << (int)status << " - " << cudaGetErrorString(status) << endl;
-        cerr << "  In " << file << " line " << line << endl;
-        cerr << "  " << lineStr << endl;
-    }
-}
 
 EndPoint CudaAligner::_alignCuda(bool rev, int iRow0, int iRow1, int iCol0, int iCol1, int rowStart, int *row,
     vector<int> &valBestInRow, vector<int> &valBestInCol, const vector<char> &x, const vector<char> &y, const Scoring &sc)
@@ -77,9 +69,13 @@ EndPoint CudaAligner::_alignCuda(bool rev, int iRow0, int iRow1, int iCol0, int 
 
 void CudaAligner::init(int ctRow, const vector<char> &x, int ctCol, const vector<char> &y)
 {
+    // TODO: WTF
+    const int ctMaxBests = 1 << 16;
+
     _col.resize(ctRow + 3);
     col = _col.data() + 1;
-    bests.resize(ctThreadsPerBlock);
+
+    bests.resize(ctMaxBests);
 
     // TODO: check sentinels?
     // TODO: allocations alignment?
@@ -89,8 +85,7 @@ void CudaAligner::init(int ctRow, const vector<char> &x, int ctCol, const vector
     cudaMalloc(&dY, (ctCol + 2) * sizeof(*dY));
     cudaMalloc(&dValBestInRow, (ctRow + 2) * sizeof(*dValBestInRow));
     cudaMalloc(&dValBestInCol, (ctCol + 2) * sizeof(*dValBestInCol));
-    // TODO: multiple blocks
-    cudaMalloc(&dBest, ctThreadsPerBlock * sizeof(*dBest));
+    cudaMalloc(&dBest, ctMaxBests * sizeof(*dBest));
 
     cudaMemcpy(dX, x.data(), (ctRow + 2) * sizeof(*dX), cudaMemcpyHostToDevice);
     cudaMemcpy(dY, y.data(), (ctCol + 2) * sizeof(*dY), cudaMemcpyHostToDevice);
