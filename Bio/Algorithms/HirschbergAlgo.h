@@ -73,7 +73,7 @@ public:
 
     //EndPoint caBest = ca._alignCuda(rev, iRow0, iRow1, iCol0, iCol1, rowStart, row, valBestInRow, valBestInCol, x, y, sc);
 
-    //return caBest;
+    ////return caBest;
 
     //vector<int> rowCuda;
     //for (int iCol = iCol0 - dir; iCol != iCol1 + dir; iCol += dir) {
@@ -105,7 +105,7 @@ public:
     //assert(stBest.p.y == caBest.p.y);
 
     //return stBest;
-#if 1
+#if 0
     return _alignSingleThread(rev, iRow0, iRow1, iCol0, iCol1, rowStart, row, valBestInRow, valBestInCol, sc);
 #else
     if (abs(iRow0 - iRow1) < 32 || abs(iCol0 - iCol1) < 32) {
