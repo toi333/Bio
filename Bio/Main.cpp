@@ -14,7 +14,39 @@
 
 using namespace std;
 
-extern int testcuda();
+void test(const string &s1, const string &s2)
+{
+    HirschbergAA algo;
+    //SquareAA algo;
+    //NaiveCubeAA algo;
+    Scoring sc;
+
+    int start = clock();
+    Alignment sol = algo.align(s1, s2, sc);
+    float runTimeAlg = (float)(clock() - start) / CLOCKS_PER_SEC;
+    const int validationScore = sol.calcScore(s1, s2, sc);
+    if (validationScore != sol.score) {
+        cout << "VALIDATION FAILED!" << endl;
+        cout << "Score should be: " << validationScore << endl;
+        sol.output(cout, s1, s2);
+    }
+    cout << "Runtime algo:   " << runTimeAlg << endl;
+
+    //SquareAA algoSq;
+    ////int startSq = clock();
+    //Alignment sol2 = algoSq.align(s1, s2, sc);
+    ////float runTimeSq = (float)(clock() - startSq) / CLOCKS_PER_SEC;
+
+    ////cout << "Runtime square: " << runTimeSq << endl;
+    //if (sol.score != sol2.score) {
+    //    cout << "FAILED!" << endl;
+    //    cout << "H: " << sol.score << endl;
+    //    sol2.output(cout, s1, s2);
+    //} else {
+    //    cout << "OK!" << endl;
+    //}
+    cout << endl;
+}
 
 void test(const char *file, int i1, int i2)
 {
@@ -30,50 +62,21 @@ void test(const char *file, int i1, int i2)
   }
   fi.close();
 
-  int cutoff = 50000;
+  int cutoff = 30000;
   for (auto &s : vs) {
     s = s.substr(0, cutoff);
   }
 
-  HirschbergAA algo;
-  //SquareAA algo;
-  //NaiveCubeAA algo;
-  Scoring sc;
-
   cout << "TEST: " << file << ' ' << i1 << ' ' << i2 << endl;
 
-  int start = clock();
-  Alignment sol = algo.align(vs[i1], vs[i2], sc);
-  float runTimeAlg = (float)(clock() - start) / CLOCKS_PER_SEC;
-  const int validationScore = sol.calcScore(vs[i1], vs[i2], sc);
-  if (validationScore != sol.score) { 
-    cout << "VALIDATION FAILED!" << endl;
-    cout << "Score should be: " << validationScore << endl;
-    sol.output(cout, vs[i1], vs[i2]);
-  }
-  cout << "Runtime algo:   " << runTimeAlg << endl;
-
-  //SquareAA algoSq;
-  //int startSq = clock();
-  //Alignment sol2 = algoSq.align(vs[i1], vs[i2], sc);
-  //float runTimeSq = (float)(clock() - startSq) / CLOCKS_PER_SEC;
-
-  //cout << "Runtime square: " << runTimeSq << endl;
-  //if (sol.score != sol2.score) {
-  //  cout << "FAILED!" << endl;
-  //  cout << "H: " << sol.score << endl;
-  //  sol2.output(cout, vs[i1], vs[i2]);
-  //} else {
-  //  cout << "OK!" << endl;
-  //}
-  cout << endl;
+  test(vs[i1], vs[i2]);
 }
 
 int main()
 {
-  init();
+  srand(time(0));
 
-  testcuda();
+  init();
 
   //test("res/test.fasta", 0, 0);
   //test("res/test.fasta", 0, 1);
@@ -94,6 +97,17 @@ int main()
   //test("res/test.fasta", 21, 22);
   //test("res/test.fasta", 23, 24);
   test("res/streptococcus_references.fasta", 0, 1);
+
+  //for (int l = 10; l < 1000; ++l) {
+  //    for (int t = 0; t < 10; ++t) {
+  //        string s1, s2;
+  //        for (int i = 0; i < l; ++i) {
+  //            s1.push_back("ACTG"[rand() % 4]);
+  //            s2.push_back("ACTG"[rand() % 4]);
+  //        }
+  //        test(s1, s2);
+  //    }
+  //}
 
   system("pause");
 }

@@ -2,6 +2,7 @@
 
 #include <Base/Core.h>
 #include <Bio/Algorithms/MultithreadedAligner.h>
+#include <CudaAligner/CudaAligner.h>
 
 #include <algorithm>
 #include <iostream>
@@ -18,6 +19,7 @@ public:
   vector<int> rowBakGap;
 
   MultithreadedAligner mta;
+  CudaAligner ca;
 
   EndPoint _alignSingleThread(bool rev, int iRow0, int iRow1, int iCol0, int iCol1, int rowStart, int *row,
     vector<int> &valBestInRow, vector<int> &valBestInCol, const Scoring &sc)
@@ -58,13 +60,65 @@ public:
   EndPoint _align(bool rev, int iRow0, int iRow1, int iCol0, int iCol1, int rowStart, int *row,
     vector<int> &valBestInRow, vector<int> &valBestInCol, const Scoring &sc)
   {
+    //int dir = rev ? -1 : 1;
+
+    //vector<int> rowCopy;
+    //for (int iCol = iCol0 - dir; iCol != iCol1 + dir; iCol += dir) {
+    //    rowCopy.push_back(row[iCol]);
+    //}
+    //vector<int> valBestInColCopy;
+    //for (int iCol = iCol0; iCol != iCol1 + dir; iCol += dir) {
+    //    valBestInColCopy.push_back(valBestInCol[iCol]);
+    //}
+
+    //EndPoint caBest = ca._alignCuda(rev, iRow0, iRow1, iCol0, iCol1, rowStart, row, valBestInRow, valBestInCol, x, y, sc);
+
+    //vector<int> rowCuda;
+    //for (int iCol = iCol0 - dir; iCol != iCol1 + dir; iCol += dir) {
+    //    rowCuda.push_back(row[iCol]);
+    //}
+    //vector<int> valBestInColCuda;
+    //for (int iCol = iCol0; iCol != iCol1 + dir; iCol += dir) {
+    //    valBestInColCuda.push_back(valBestInCol[iCol]);
+    //}
+
+    ////return caBest;
+
+    //for (int iCol = iCol0 - dir, j = 0; iCol != iCol1 + dir; iCol += dir, ++j) {
+    //    row[iCol] = rowCopy[j];
+    //}
+    //for (int iCol = iCol0, j = 0; iCol != iCol1 + dir; iCol += dir, ++j) {
+    //    valBestInCol[iCol] = valBestInColCopy[j];
+    //}
+
+    //EndPoint stBest = _alignSingleThread(rev, iRow0, iRow1, iCol0, iCol1, rowStart, row, valBestInRow, valBestInCol, sc);
+
+    //for (int iCol = iCol0 - dir, j = 0; iCol != iCol1 + dir; iCol += dir, ++j) {
+    //    assert(row[iCol] == rowCuda[j]);
+    //}
+    //for (int iCol = iCol0, j = 0; iCol != iCol1 + dir; iCol += dir, ++j) {
+    //    assert(valBestInCol[iCol] == valBestInColCuda[j]);
+    //}
+
+    //assert(stBest.val == caBest.val);
+    //assert(stBest.p.x == caBest.p.x);
+    //assert(stBest.p.y == caBest.p.y);
+
+    //return stBest;
 #if 0
     return _alignSingleThread(rev, iRow0, iRow1, iCol0, iCol1, rowStart, row, valBestInRow, valBestInCol, sc);
 #else
     if (abs(iRow0 - iRow1) < 32 || abs(iCol0 - iCol1) < 32) {
       return _alignSingleThread(rev, iRow0, iRow1, iCol0, iCol1, rowStart, row, valBestInRow, valBestInCol, sc);
     }
-    return mta._alignMultithreaded(rev, iRow0, iRow1, iCol0, iCol1, rowStart, row, valBestInRow, valBestInCol, x, y, sc);
+    #if 1
+        if (abs(iRow0 - iRow1) < 2000 || abs(iCol0 - iCol1) < 2000) {
+            return mta._alignMultithreaded(rev, iRow0, iRow1, iCol0, iCol1, rowStart, row, valBestInRow, valBestInCol, x, y, sc);
+        }
+        return ca._alignCuda(rev, iRow0, iRow1, iCol0, iCol1, rowStart, row, valBestInRow, valBestInCol, x, y, sc);
+    #else
+        return mta._alignMultithreaded(rev, iRow0, iRow1, iCol0, iCol1, rowStart, row, valBestInRow, valBestInCol, x, y, sc);
+    #endif
 #endif
   }
 
@@ -302,12 +356,14 @@ public:
     rowBakGap.resize(ctCol + 2);
 
     mta.init(ctRow, ctCol);
+    ca.init(ctRow, x, ctCol, y);
 
     Alignment sol;
     alignRec(0, ctRow, 0, ctCol, false, false, row.data() + 1, valBestInRow, valBestInCol, sc, sol);
     sol.compress();
 
     mta.destroy();
+    ca.destroy();
 
     return sol;
   }

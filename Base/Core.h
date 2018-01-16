@@ -38,8 +38,8 @@ public:
 
 struct EndPoint
 {
-  int val = -1;
-  Vec2i p;
+  int val = INT_MIN;
+  Vec2i p = Vec2i{ -1, -1 };
 
   bool Add(int val, Vec2i p)
   {
