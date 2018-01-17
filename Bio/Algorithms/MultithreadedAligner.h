@@ -129,7 +129,7 @@ public:
 
   void init(int ctRow, int ctCol)
   {
-    ctMaxThreads = min(ctCol, 8);
+    ctMaxThreads = min(ctCol, 16);
 
     tds.resize(ctMaxThreads + 1);
     for (auto &td : tds) {

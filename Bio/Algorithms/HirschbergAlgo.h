@@ -120,7 +120,7 @@ public:
       return _alignSingleThread(ctRow, ctCol, x, y, rowStart, row, valBestInRow, valBestInCol, sc);
     }
     #if 1
-        if (ctRow < 2000 || ctCol < 2000) {
+        if (ctRow < 4000 || ctCol < 4000) {
             return mta._alignMultithreaded(ctRow, ctCol, x, y, rowStart, row, valBestInRow, valBestInCol, sc);
         }
         return ca._alignCuda(ctRow, ctCol, x - (rev ? xr.data() : this->x.data()), y - (rev ? yr.data() : this->y.data()),
