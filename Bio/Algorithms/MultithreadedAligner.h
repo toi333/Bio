@@ -22,15 +22,16 @@ public:
     };
 
     ThreadData() {}
-    ThreadData(ThreadData &td) {}
+    ThreadData(const ThreadData &td) {}
     vector<int> _col;
     int *col;
     vector<RowData> localRowData;
     atomic<int> iRow;
     EndPoint best;
     function<void(void)> f = nullptr;
-    atomic<int> go = false;
-    atomic<int> die = false;
+    atomic<int> go{false};
+    atomic<int> die{false}; 
+
   };
 
   vector<ThreadData> tds;
@@ -118,8 +119,8 @@ public:
         this_thread::yield();
       }
       const EndPoint &b = tds[iThread].best;
-      if (b.val > r.val || (b.val == r.val &&
-          (b.p.x < r.p.x || b.p.x == r.p.x && b.p.y < r.p.y))) {
+      if (b.val > r.val || b.val == r.val &&
+          (b.p.x < r.p.x || b.p.x == r.p.x && b.p.y < r.p.y)) {
           r = b;
       }
     }
