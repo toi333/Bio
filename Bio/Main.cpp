@@ -68,7 +68,7 @@ void test(const char *file, int i1, int i2)
   }
   fi.close();
 
-  int cutoff = 300000;
+  int cutoff = 1000000;
   for (auto &s : vs) {
     s = s.substr(0, cutoff);
   }
@@ -113,15 +113,17 @@ int main()
   test("res/test.fasta", 40, 41);
   test("res/test.fasta", 42, 43);
   test("res/test.fasta", 44, 45);
+  test("res/test.fasta", 46, 47);
+  test("res/test.fasta", 48, 49);
 #endif
 
 #if 0
   test("res/streptococcus_references.fasta", 0, 1);
 #endif
 
-#if 0
-  for (int l = 6; l < 400000; ++l) {
-      for (int t = 0; t < 1000; ++t) {
+#if 1
+  for (int l = 200000; l < 400000; ++l) {
+      for (int t = 0; t < 50; ++t) {
           string s1, s2;
           for (int i = 0; i < l; ++i) {
               s1.push_back("ACTG"[rand() % 4]);

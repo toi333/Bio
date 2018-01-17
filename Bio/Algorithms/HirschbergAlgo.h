@@ -114,6 +114,7 @@ public:
 #if 0
       return ca._alignCuda(ctRow, ctCol, x - (rev ? xr.data() : this->x.data()), y - (rev ? yr.data() : this->y.data()),
           rev, rowStart, row, valBestInRow, valBestInCol, sc);
+      //return _alignSingleThread(ctRow, ctCol, x, y, rowStart, row, valBestInRow, valBestInCol, sc);
 #else
     if (ctRow < 32 || ctCol < 32) {
       return _alignSingleThread(ctRow, ctCol, x, y, rowStart, row, valBestInRow, valBestInCol, sc);
@@ -358,6 +359,11 @@ public:
 
   Alignment align(const string &a, const string &b, const Scoring &sc)
   {
+    if (sc.b < sc.k) {
+        cerr << "Gap opening penaly must be higher that extension!" << endl;
+        return Alignment();
+    }
+
     x = encode(a);
     y = encode(b);
 

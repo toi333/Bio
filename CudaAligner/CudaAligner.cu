@@ -15,12 +15,14 @@ struct LocalRowData
     int valBestInCol;
 };
 
-__global__ void kernel(int iBlockRun, int blockRunProgress, int ctColPerThread, int ctRow, int ctCol, int defVal,
+__global__ void kernel(int iBlock0, int iBlockRun, int blockRunProgress, int ctColPerThread, int ctRow, int ctCol, int defVal,
     int *row, int *col, int *valBestInRow, int *valBestInCol, char *x, char *y, EndPoint *bests, const Scoring sc)
 {
     extern __shared__ LocalRowData _lrd[];
 
-    const int iThread0 = blockIdx.x * blockDim.x;
+    const int iBlock = iBlock0 + blockIdx.x;
+
+    const int iThread0 = iBlock * blockDim.x;
 
     LocalRowData *lrd = _lrd - ctColPerThread * iThread0;
 
@@ -32,7 +34,7 @@ __global__ void kernel(int iBlockRun, int blockRunProgress, int ctColPerThread, 
     best.val = INT_MIN;
     best.p = Vec2i{ -1, -1 };
 
-    const int blockOffset = blockRunProgress * (iBlockRun - (int)blockIdx.x) - (int)blockIdx.x;
+    const int blockOffset = blockRunProgress * (iBlockRun - iBlock) - iBlock;
 
     const int iRow0B = blockOffset;
     const int iRow1B = iRow0B + blockRunProgress;
@@ -123,14 +125,17 @@ int callKernel(int ctRow, int ctCol, char *x, char *y, int defVal, CudaAligner *
 
     const int iLastBlock = ctBlocks - 1;
 
-    //(int)blockIdx.x > (blockRunProgress * iBlockRun - ctRow) / (blockRunProgress + 1)
-
-    // TODO: ctColR vs ctCol ??
     const int ctBlockRuns = ((ctRow + iLastBlock) + blockRunProgress - 1) / blockRunProgress + iLastBlock;
 
     for (int iBlockRun = 0; iBlockRun < ctBlockRuns; ++iBlockRun) {
-        kernel<<<ctBlocks, ctThreadsPerBlock, ctThreadPerFullBlock * ctColPerThread  * sizeof(LocalRowData)>>>(
-            iBlockRun, blockRunProgress, ctColPerThread, ctRow, ctCol, defVal,
+        const int iBlock0 = min(max(0, (blockRunProgress * iBlockRun - ctRow) / (blockRunProgress + 1)), ctBlocks - 1);
+        //const int iBlock1 = min(max(0, (blockRunProgress * (iBlockRun + 2)) / (blockRunProgress + 1)), ctBlocks - 1);
+        const int iBlock1 = ctBlocks - 1;
+
+        const int ctBlocksTrim = iBlock1 - iBlock0 + 1;
+
+        kernel<<<ctBlocksTrim, ctThreadsPerBlock, ctThreadPerFullBlock * ctColPerThread  * sizeof(LocalRowData)>>>(
+            iBlock0, iBlockRun, blockRunProgress, ctColPerThread, ctRow, ctCol, defVal,
             ca->dRow, ca->dCol, ca->dValBestInRow, ca->dValBestInCol, x, y, ca->dBest, sc);
 
         CUDA_CHECK(cudaGetLastError());

@@ -76,9 +76,9 @@ class Scoring
     }
 
     // const int gapOpen = 5;
-    const int k = 5;
+    const int b = 5;
     // const int gapExtend = 2;
-    const int b = 2;
+    const int k = 2;
 };
 
 class Alignment {
