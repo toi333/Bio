@@ -54,10 +54,8 @@ public:
     return best;
   }
 
-  EndPoint _align(int ctRow, int ctCol, char *x, char *y, int rowStart, int *row,
+  EndPoint _align(int ctRow, int ctCol, bool rev, char *x, char *y, int rowStart, int *row,
       vector<int> &valBestInRow, vector<int> &valBestInCol, const Scoring &sc)
-  //EndPoint _align(bool rev, int iRow0, int iRow1, int iCol0, int iCol1, int rowStart, int *row,
-  //  vector<int> &valBestInRow, vector<int> &valBestInCol, const Scoring &sc)
   {
     //vector<int> rowCopy;
     //for (int iCol = -1; iCol < ctCol; ++iCol) {
@@ -72,8 +70,9 @@ public:
     //    valBestInRowCopy.push_back(valBestInRow[iRow]);
     //}
 
-    ////EndPoint caBest = ca._alignCuda(rev, iRow0, iRow1, iCol0, iCol1, rowStart, row, valBestInRow, valBestInCol, x, y, sc);
-    //EndPoint caBest = mta._alignMultithreaded(ctRow, ctCol, x, y, rowStart, row, valBestInRow, valBestInCol, sc);
+    //EndPoint caBest = ca._alignCuda(ctRow, ctCol, x - (rev ? xr.data() : this->x.data()), y - (rev ? yr.data() : this->y.data()),
+    //    rev, rowStart, row, valBestInRow, valBestInCol, sc);
+    ////EndPoint caBest = mta._alignMultithreaded(ctRow, ctCol, x, y, rowStart, row, valBestInRow, valBestInCol, sc);
 
     ////return caBest;
 
@@ -116,11 +115,12 @@ public:
     if (ctRow < 32 || ctCol < 32) {
       return _alignSingleThread(ctRow, ctCol, x, y, rowStart, row, valBestInRow, valBestInCol, sc);
     }
-    #if 0
+    #if 1
         if (ctRow < 2000 || ctCol < 2000) {
             return mta._alignMultithreaded(ctRow, ctCol, x, y, rowStart, row, valBestInRow, valBestInCol, sc);
         }
-        return ca._alignCuda(rev, iRow0, iRow1, iCol0, iCol1, rowStart, row, valBestInRow, valBestInCol, x, y, sc);
+        return ca._alignCuda(ctRow, ctCol, x - (rev ? xr.data() : this->x.data()), y - (rev ? yr.data() : this->y.data()),
+            rev, rowStart, row, valBestInRow, valBestInCol, sc);
     #else
         return mta._alignMultithreaded(ctRow, ctCol, x, y, rowStart, row, valBestInRow, valBestInCol, sc);
     #endif
@@ -226,8 +226,8 @@ public:
     }
     EndPoint bestFwd{ 0, { iRow0, iCol0} };
     if (iRow0 + 1 <= iMidRow - 1) {
-      EndPoint b = _align(iMidRow - iRow0 - 1, iCol1 - iCol0 + 1, x.data() + iRow0 + 1, y.data() + iCol0, startVal,
-          row, valBestInRow, valBestInCol, sc);
+      EndPoint b = _align(iMidRow - iRow0 - 1, iCol1 - iCol0 + 1, false,
+          x.data() + iRow0 + 1, y.data() + iCol0, startVal, row, valBestInRow, valBestInCol, sc);
       b.p.x += iRow0 + 1;
       b.p.y += iCol0;
       bestFwd.Add(b);
@@ -265,8 +265,8 @@ public:
     }
     EndPoint bestBak{ 0, { iRow1, iCol1 } };
     if (iMidRow + 1 <= iRow1 - 1) {
-      EndPoint b = _align(iRow1 - iMidRow - 1, iCol1 - iCol0 + 1, xr.data() + ctRow - (iRow1 - 1), yr.data() + ctCol - iCol1, endVal,
-          rowBak, valBestInRow, valBestInCol, sc);
+      EndPoint b = _align(iRow1 - iMidRow - 1, iCol1 - iCol0 + 1, true,
+          xr.data() + ctRow - (iRow1 - 1), yr.data() + ctCol - iCol1, endVal, rowBak, valBestInRow, valBestInCol, sc);
       b.p.x = iRow1 - 1 - b.p.x;
       b.p.y = iCol1 - b.p.y;
       bestBak.Add(b);
@@ -357,9 +357,9 @@ public:
     x = encode(a);
     y = encode(b);
 
-    xr = encode(a);
-    yr = encode(b);
+    xr = x;
     reverse(xr.begin() + 1, xr.end());
+    yr = y;
     reverse(yr.begin() + 1, yr.end());
 
     ctRow = (int)a.size();
@@ -378,14 +378,14 @@ public:
     rowBakGap.resize(ctCol + 2);
 
     mta.init(ctRow, ctCol);
-    //ca.init(ctRow, x, ctCol, y);
+    ca.init(ctRow, x, xr, ctCol, y, yr);
 
     Alignment sol;
     alignRec(0, ctRow, 0, ctCol, false, false, row.data() + 1, valBestInRow, valBestInCol, sc, sol);
     sol.compress();
 
     mta.destroy();
-    //ca.destroy();
+    ca.destroy();
 
     return sol;
   }
