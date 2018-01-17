@@ -120,5 +120,8 @@
     <Property Name="EnableToolsExtResourceNaming" Value="True" />
     <Property Name="EnableToolsExtStartEndRangeTrace" Value="True" />
     <Property Name="ExtensionsToSynchronize" Value="*;" />
+    <Property Name="ProfileOptionEnableKernelCaptureLimits" Value="True" />
+    <Property Name="ProfileOptionEnableKernelCounter" Value="True" />
+    <Property Name="ProfileOptionKernelCounterValue" Value="2" />
     <Property Name="WorkingDirectory" Value="C:\Projects\bio\Bio\Bio\" />
 </Model>

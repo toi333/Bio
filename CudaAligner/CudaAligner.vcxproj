@@ -98,15 +98,15 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CudaCompile Include="CudaAligner.cu" />
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="CudaAligner.cpp" />
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CudaAligner.h" />
     <ClInclude Include="Util.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="CudaAligner.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

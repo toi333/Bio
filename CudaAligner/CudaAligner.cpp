@@ -70,7 +70,8 @@ EndPoint CudaAligner::_alignCuda(bool rev, int iRow0, int iRow1, int iCol0, int 
 void CudaAligner::init(int ctRow, const vector<char> &x, int ctCol, const vector<char> &y)
 {
     // TODO: WTF
-    const int ctMaxBests = 1 << 16;
+    const int ctMaxBests = 1 << 18;
+    const int ctMaxBlocks = (ctCol + 127) / 128 + 100;
 
     _col.resize(ctRow + 3);
     col = _col.data() + 1;
@@ -79,12 +80,15 @@ void CudaAligner::init(int ctRow, const vector<char> &x, int ctCol, const vector
 
     // TODO: check sentinels?
     // TODO: allocations alignment?
-    cudaMalloc(&dRow, (ctCol + 2) * sizeof(*dRow));
+    cudaMalloc(&_dRow, (ctCol + 2 + 2 * ctMaxBlocks) * sizeof(*dRow));
+    dRow = _dRow + ctMaxBlocks;
     cudaMalloc(&dCol, (ctRow + 2) * sizeof(*dCol));
     cudaMalloc(&dX, (ctRow + 2) * sizeof(*dX));
-    cudaMalloc(&dY, (ctCol + 2) * sizeof(*dY));
+    cudaMalloc(&_dY, (ctCol + 2 + 2 * ctMaxBlocks) * sizeof(*dY));
+    dY = _dY + ctMaxBlocks;
     cudaMalloc(&dValBestInRow, (ctRow + 2) * sizeof(*dValBestInRow));
-    cudaMalloc(&dValBestInCol, (ctCol + 2) * sizeof(*dValBestInCol));
+    cudaMalloc(&_dValBestInCol, (ctCol + 2 + 2 * ctMaxBlocks) * sizeof(*dValBestInCol));
+    dValBestInCol = _dValBestInCol + ctMaxBlocks;
     cudaMalloc(&dBest, ctMaxBests * sizeof(*dBest));
 
     cudaMemcpy(dX, x.data(), (ctRow + 2) * sizeof(*dX), cudaMemcpyHostToDevice);
@@ -94,10 +98,10 @@ void CudaAligner::init(int ctRow, const vector<char> &x, int ctCol, const vector
 void CudaAligner::destroy()
 {
     cudaFree(dBest);
-    cudaFree(dValBestInCol);
+    cudaFree(_dValBestInCol);
     cudaFree(dValBestInRow);
-    cudaFree(dY);
+    cudaFree(_dY);
     cudaFree(dX);
     cudaFree(dCol);
-    cudaFree(dRow);
+    cudaFree(_dRow);
 }

@@ -29,23 +29,27 @@ void test(const string &s1, const string &s2)
         cout << "VALIDATION FAILED!" << endl;
         cout << "Score should be: " << validationScore << endl;
         sol.output(cout, s1, s2);
+        cout << s1 << endl;
+        cout << s2 << endl;
     }
     cout << "Runtime algo:   " << runTimeAlg << endl;
 
-    //SquareAA algoSq;
-    ////int startSq = clock();
-    //Alignment sol2 = algoSq.align(s1, s2, sc);
-    ////float runTimeSq = (float)(clock() - startSq) / CLOCKS_PER_SEC;
+    SquareAA algoSq;
+    //int startSq = clock();
+    Alignment sol2 = algoSq.align(s1, s2, sc);
+    //float runTimeSq = (float)(clock() - startSq) / CLOCKS_PER_SEC;
 
-    ////cout << "Runtime square: " << runTimeSq << endl;
-    //if (sol.score != sol2.score) {
-    //    cout << "FAILED!" << endl;
-    //    cout << "H: " << sol.score << endl;
-    //    sol2.output(cout, s1, s2);
-    //} else {
-    //    cout << "OK!" << endl;
-    //}
-    cout << endl;
+    //cout << "Runtime square: " << runTimeSq << endl;
+    if (sol.score != sol2.score) {
+        cout << "FAILED!" << endl;
+        cout << "H: " << sol.score << endl;
+        sol2.output(cout, s1, s2);
+        cout << s1 << endl;
+        cout << s2 << endl;
+    } else {
+        cout << "OK!" << endl;
+    }
+    //cout << endl;
 }
 
 void test(const char *file, int i1, int i2)
@@ -62,7 +66,7 @@ void test(const char *file, int i1, int i2)
   }
   fi.close();
 
-  int cutoff = 30000;
+  int cutoff = 100000;
   for (auto &s : vs) {
     s = s.substr(0, cutoff);
   }
@@ -96,6 +100,8 @@ int main()
   //test("res/test.fasta", 20, 19);
   //test("res/test.fasta", 21, 22);
   //test("res/test.fasta", 23, 24);
+  //test("res/test.fasta", 27, 27);
+  //test("res/test.fasta", 28, 29);
   //test("res/streptococcus_references.fasta", 0, 1);
 
   for (int l = 10; l < 1000; ++l) {

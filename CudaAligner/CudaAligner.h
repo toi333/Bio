@@ -18,11 +18,14 @@ public:
     vector<EndPoint> bests;
 
     // device memory
+    int *_dRow;
     int *dRow;
     int *dCol;
     char *dX;
+    char *_dY;
     char *dY;
     int *dValBestInRow;
+    int *_dValBestInCol;
     int *dValBestInCol;
     EndPoint *dBest;
 
