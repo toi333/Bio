@@ -22,15 +22,16 @@ public:
     };
 
     ThreadData() {}
-    ThreadData(ThreadData &td) {}
+    ThreadData(const ThreadData &td) {}
     vector<int> _col;
     int *col;
     vector<RowData> localRowData;
     atomic<int> iRow;
     EndPoint best;
     function<void(void)> f = nullptr;
-    atomic<int> go = false;
-    atomic<int> die = false;
+    atomic<int> go{false};
+    atomic<int> die{false}; 
+
   };
 
   vector<ThreadData> tds;
