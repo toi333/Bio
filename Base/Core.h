@@ -3,18 +3,7 @@
 #include <fstream>
 #include <vector>
 #include <string>
-
-#ifdef __linux__
-
-#ifndef INT_MAX
-#define INT_MAX INT32_MAX
-#endif
-#ifndef INT_MIN
-#define INT_MIN INT32_MIN
-#endif
-
-#endif
-
+#include <climits>
 
 using namespace std;
 
