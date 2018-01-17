@@ -23,7 +23,7 @@ const vector<string> readFastaVector(const char *file)
     if (l[0] == '>') {
       vs.push_back(string());
     } else {
-      vs.back() += l;
+      vs.push_back(l);
     }
   }
   fi.close();

@@ -23,7 +23,7 @@ int main(int argc, char**argv)
   int start = clock();
   Alignment sol = algo.align(genom1, genom2, sc);
   float runTimeAlg = (float)(clock() - start) / CLOCKS_PER_SEC;
-  cout << "Cuda runtime: " << runTimeAlg << endl;
+  cout << "Algo runtime: " << runTimeAlg << endl;
   cout << "Score: " << sol.score << endl;
 
 
