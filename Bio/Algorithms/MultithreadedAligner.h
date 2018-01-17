@@ -12,7 +12,7 @@
 class MultithreadedAligner
 {
 public:
-  static const int ctThreads = 8;
+  int ctMaxThreads;
 
   struct ThreadData {
     struct RowData {
@@ -37,58 +37,49 @@ public:
 
   vector<thread> ts;
 
-  EndPoint _alignMultithreaded(bool rev, int iRow0, int iRow1, int iCol0, int iCol1, int rowStart, int *row,
-    vector<int> &valBestInRow, vector<int> &valBestInCol, const vector<char> &x, const vector<char> &y, const Scoring &sc)
+  EndPoint _alignMultithreaded(int ctRow, int ctCol, const char *x, const char *y, int rowStart,
+      int *row, vector<int> &valBestInRow, vector<int> &valBestInCol, const Scoring &sc)
   {
-    const int dir = rev ? -1 : 1;
-    tds[0].col[iRow0 - dir] = row[iCol0 - dir];
-    for (int iRow = iRow0; iRow != iRow1 + dir; iRow += dir) {
+    const int ctThreads = min(ctMaxThreads, ctCol);
+
+    tds[0].col[-1] = row[-1];
+    for (int iRow = 0; iRow < ctRow; ++iRow) {
       tds[0].col[iRow] = rowStart;
     }
-    tds[0].iRow = iRow1;
+    tds[0].iRow = ctRow - 1;
 
     for (int iThread = 1; iThread <= ctThreads; ++iThread) {
-      tds[iThread].iRow = iRow0 - dir;
+      tds[iThread].iRow = -1;
       tds[iThread].best = EndPoint{};
     }
 
     for (int iThread = 1; iThread <= ctThreads; ++iThread) {
-      tds[iThread].f = [iThread, rev, iRow0, iRow1, iCol0, iCol1,
-        rowStart, row, &valBestInRow, &valBestInCol, &x, &y, &sc, this]()
+      tds[iThread].f = [iThread, ctThreads, ctRow, ctCol,
+        rowStart, row, &valBestInRow, &valBestInCol, x, y, &sc, this]()
       {
         const Scoring scLocal = sc;
         EndPoint best;
-
-        const int dir = rev ? -1 : 1;
-
-        int iThCol0 = iCol0 + (iCol1 - iCol0) * (iThread - 1) / ctThreads;
-        int iThCol1 = iCol0 + (iCol1 - iCol0) * iThread / ctThreads - (iThread == ctThreads ? 0 : dir);
-
-        int iThRow0 = iRow0;
-        int iThRow1 = iRow1 + dir;
-        iThCol1 += dir;
-
-        const int cpyStart = min(iThCol0, iThCol1 - dir);
-        const int cpyCount = abs(iThCol1 - iThCol0);
+        int iThCol0 = ctCol * (iThread - 1) / ctThreads;
+        int iThCol1 = ctCol * iThread / ctThreads;
 
         auto *localRowData = tds[iThread].localRowData.data();
-        for (int iCol = cpyStart; iCol < cpyStart + cpyCount; ++iCol) {
+        for (int iCol = iThCol0; iCol < iThCol1; ++iCol) {
           localRowData[iCol].row = row[iCol];
           localRowData[iCol].valBestInCol = valBestInCol[iCol];
-          localRowData[iCol].y = y[iCol + rev];
+          localRowData[iCol].y = y[iCol];
         }
+        tds[iThread].col[-1] = row[iThCol1 - 1];
 
-        tds[iThread].col[iThRow0 - dir] = localRowData[iThCol1 - dir].row;
-        for (int iRow = iThRow0; iRow != iThRow1; iRow += dir) {
-          while (dir * tds[iThread - 1].iRow < dir * iRow) {
+        for (int iRow = 0; iRow < ctRow; ++iRow) {
+          while (tds[iThread - 1].iRow < iRow) {
             this_thread::yield();
           }
-          int prevColRow = tds[iThread - 1].col[iRow - dir];
+          int prevColRow = tds[iThread - 1].col[iRow - 1];
           int prevCol = tds[iThread - 1].col[iRow];
 
-          const char xLocal = x[iRow + rev];
+          const char xLocal = x[iRow];
           int valBestInRowLocal = valBestInRow[iRow];
-          for (int iCol = iThCol0; iCol != iThCol1; iCol += dir) {
+          for (int iCol = iThCol0; iCol < iThCol1; ++iCol) {
             int r = rowStart;
 
             auto &lrd = localRowData[iCol];
@@ -110,10 +101,10 @@ public:
             best.Add(r, Vec2i{ iRow, iCol });
           }
           valBestInRow[iRow] = valBestInRowLocal;
-          tds[iThread].col[iRow] = localRowData[iThCol1 - dir].row;
+          tds[iThread].col[iRow] = localRowData[iThCol1 - 1].row;
           tds[iThread].iRow = iRow;
         }
-        for (int iCol = cpyStart; iCol < cpyStart + cpyCount; ++iCol) {
+        for (int iCol = iThCol0; iCol < iThCol1; ++iCol) {
           row[iCol] = localRowData[iCol].row;
           valBestInCol[iCol] = localRowData[iCol].valBestInCol;
         }
@@ -126,21 +117,27 @@ public:
       while (tds[iThread].go) {
         this_thread::yield();
       }
-      r.Add(tds[iThread].best);
+      const EndPoint &b = tds[iThread].best;
+      if (b.val > r.val || (b.val == r.val &&
+          (b.p.x < r.p.x || b.p.x == r.p.x && b.p.y < r.p.y))) {
+          r = b;
+      }
     }
     return r;
   }
 
   void init(int ctRow, int ctCol)
   {
-    tds.resize(ctThreads + 1);
+    ctMaxThreads = min(ctCol, 8);
+
+    tds.resize(ctMaxThreads + 1);
     for (auto &td : tds) {
       td._col.resize(ctRow + 3);
       td.col = td._col.data() + 1;
       td.localRowData.resize(ctCol + 2);
     }
-    ts.resize(ctThreads + 1);
-    for (int iThread = 1; iThread <= ctThreads; ++iThread) {
+    ts.resize(ctMaxThreads + 1);
+    for (int iThread = 1; iThread <= ctMaxThreads; ++iThread) {
       ts[iThread] = thread([iThread, this]() {
         while (!tds[iThread].die) {
           if (tds[iThread].go) {
@@ -156,10 +153,10 @@ public:
 
   void destroy()
   {
-    for (int iThread = 1; iThread <= ctThreads; ++iThread) {
+    for (int iThread = 1; iThread <= ctMaxThreads; ++iThread) {
       tds[iThread].die = 1;
     }
-    for (int iThread = 1; iThread <= ctThreads; ++iThread) {
+    for (int iThread = 1; iThread <= ctMaxThreads; ++iThread) {
       ts[iThread].join();
     }
   }
