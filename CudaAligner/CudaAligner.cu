@@ -13,7 +13,7 @@ struct LocalRowData
     int valBestInCol;
 };
 
-__global__ void kernel(int iBlockRun, int blockRunProgress, int ctColPerThread, int ctRow, int ctCol, int ctColReal, int defVal,
+__global__ void kernel(int iBlockRun, int blockRunProgress, int ctColPerThread, int ctRow, int ctCol, int defVal,
     int *row, int *col, int *valBestInRow, int *valBestInCol, char *x, char *y, EndPoint *bests, const Scoring sc)
 {
     extern __shared__ LocalRowData _lrd[];
@@ -61,8 +61,8 @@ __global__ void kernel(int iBlockRun, int blockRunProgress, int ctColPerThread, 
         if (iRow0S <= iRow && iRow < iRow1S) {
             int prevColRow = col[iRow - 1];
             // TODO: fix this
-            const bool end = iRow == iRow1S - 1 || iRow == iRow1S - 1;
-            int prevCol = end && iThreadInGrid != 0 ? row[iCol0T - 1] : col[iRow];
+            //int prevCol = iRow == iRow1S - 1 && iThreadInGrid != 0 ? row[iCol0T - 1] : col[iRow];
+            int prevCol = iRow == ctRow - 1 && iThreadInGrid != 0 || iRow == iRow1B - 1 && threadIdx.x != 0 ? row[iCol0T - 1] : col[iRow];
             int valBestInRowLocal = valBestInRow[iRow];
             char xLocal = x[iRow];
             for (int iCol = iCol0T; iCol < iCol1T; ++iCol) {
@@ -82,14 +82,14 @@ __global__ void kernel(int iBlockRun, int blockRunProgress, int ctColPerThread, 
                 lrd[iCol].row = r;
                 prevCol = r;
 
-                if (r > best.val && iCol < ctColReal) {
+                if (r > best.val && iCol < ctCol) {
                     best.val = r;
                     best.p = Vec2i{ iRow, iCol };
                 }
             }
             col[iRow - 1] = prevColRow;
             valBestInRow[iRow] = valBestInRowLocal;
-            if (end) {
+            if (iRow == iRow1S - 1) {
                 for (int iCol = iCol0T; iCol < iCol1T; ++iCol) {
                     row[iCol] = lrd[iCol].row;
                     valBestInCol[iCol] = lrd[iCol].valBestInCol;
@@ -117,14 +117,16 @@ int callKernel(int ctRow, int ctCol, char *x, char *y, int defVal, CudaAligner *
 
     const int ctThreadsPerBlock = (ctTotalThreads + ctBlocks - 1) / ctBlocks;
 
-    const int ctColR = ctBlocks * ctThreadsPerBlock * ctColPerThread - 1;
+    const int ctColR = ctBlocks * ctThreadsPerBlock * ctColPerThread;
 
     const int iLastBlock = ctBlocks - 1;
-    const int ctBlockRuns = ((ctRow + iLastBlock) + blockRunProgress - 1) / blockRunProgress + iLastBlock;
+
+    // TODO: ctColR vs ctCol ??
+    const int ctBlockRuns = ((ctColR + iLastBlock) + blockRunProgress - 1) / blockRunProgress + iLastBlock;
 
     for (int iBlockRun = 0; iBlockRun < ctBlockRuns; ++iBlockRun) {
         kernel<<<ctBlocks, ctThreadsPerBlock, ctThreadPerFullBlock * ctColPerThread  * sizeof(LocalRowData)>>>(
-            iBlockRun, blockRunProgress, ctColPerThread, ctRow, ctColR, ctCol, defVal,
+            iBlockRun, blockRunProgress, ctColPerThread, ctRow, ctCol, defVal,
             ca->dRow, ca->dCol, ca->dValBestInRow, ca->dValBestInCol, x, y, ca->dBest, sc);
 
         CUDA_CHECK(cudaGetLastError());

@@ -7,8 +7,6 @@
 #include <iostream>
 #include <ctime>
 
-static const int ctThreadsPerBlock = 1024;
-
 extern int callKernel(int ctRow, int ctCol, char *x, char *y, int defVal, CudaAligner *ca, const Scoring &sc);
 
 EndPoint CudaAligner::_alignCuda(int ctRow, int ctCol, int iX, int iY, bool rev, int rowStart, int *row,
@@ -38,7 +36,9 @@ EndPoint CudaAligner::_alignCuda(int ctRow, int ctCol, int iX, int iY, bool rev,
 
     const int tm = clock() - start;
     totalTime += tm;
-    //cout << "time: " << (float)tm / CLOCKS_PER_SEC << ' ' << (float)totalTime / CLOCKS_PER_SEC << endl;
+    if (tm > 1000) {
+        cout << "time: " << (float)tm / CLOCKS_PER_SEC << ' ' << (float)totalTime / CLOCKS_PER_SEC << endl;
+    }
 
     CUDA_CHECK(cudaMemcpy(row, dRow, ctCol * sizeof(*row), cudaMemcpyDeviceToHost));
     CUDA_CHECK(cudaMemcpy(valBestInCol.data(), dValBestInCol, ctCol * sizeof(*dValBestInCol), cudaMemcpyDeviceToHost));
@@ -62,7 +62,7 @@ void CudaAligner::init(int ctRow, const vector<char> &x, const vector<char> &xr,
 {
     // TODO: WTF
     const int ctMaxBests = 1 << 18;
-    const int ctMaxBlocks = (ctCol + 127) / 128 + 100;
+    const int ctMaxBlocks = (ctCol + (1 << 7) - 1) / (1 << 7) + 100;
 
     _col.resize(ctRow + 3);
     col = _col.data() + 1;

@@ -57,60 +57,63 @@ public:
   EndPoint _align(int ctRow, int ctCol, bool rev, char *x, char *y, int rowStart, int *row,
       vector<int> &valBestInRow, vector<int> &valBestInCol, const Scoring &sc)
   {
-    //vector<int> rowCopy;
-    //for (int iCol = -1; iCol < ctCol; ++iCol) {
-    //    rowCopy.push_back(row[iCol]);
-    //}
-    //vector<int> valBestInColCopy;
-    //for (int iCol = 0; iCol < ctCol; ++iCol) {
-    //    valBestInColCopy.push_back(valBestInCol[iCol]);
-    //}
-    //vector<int> valBestInRowCopy;
-    //for (int iRow = 0; iRow < ctRow; ++iRow) {
-    //    valBestInRowCopy.push_back(valBestInRow[iRow]);
-    //}
-
-    //EndPoint caBest = ca._alignCuda(ctRow, ctCol, x - (rev ? xr.data() : this->x.data()), y - (rev ? yr.data() : this->y.data()),
-    //    rev, rowStart, row, valBestInRow, valBestInCol, sc);
-    ////EndPoint caBest = mta._alignMultithreaded(ctRow, ctCol, x, y, rowStart, row, valBestInRow, valBestInCol, sc);
-
-    ////return caBest;
-
-    //vector<int> rowCuda;
-    //for (int iCol = -1; iCol < ctCol; ++iCol) {
-    //    rowCuda.push_back(row[iCol]);
-    //}
-    //vector<int> valBestInColCuda;
-    //for (int iCol = 0; iCol < ctCol; ++iCol) {
-    //    valBestInColCuda.push_back(valBestInCol[iCol]);
-    //}
-
-    //for (int iCol = -1; iCol < ctCol; ++iCol) {
-    //    row[iCol] = rowCopy[iCol+1];
-    //}
-    //for (int iCol = 0; iCol < ctCol; ++iCol) {
-    //    valBestInCol[iCol] = valBestInColCopy[iCol];
-    //}
-    //for (int iRow = 0; iRow < ctRow; ++iRow) {
-    //    valBestInRow[iRow] = valBestInRowCopy[iRow];
-    //}
-
-    //EndPoint stBest = _alignSingleThread(ctRow, ctCol, x, y, rowStart, row, valBestInRow, valBestInCol, sc);
-
-    //for (int iCol = -1; iCol < ctCol; ++iCol) {
-    //    assert(row[iCol] == rowCuda[iCol+1]);
-    //}
-    //for (int iCol = 0; iCol < ctCol; ++iCol) {
-    //    assert(valBestInCol[iCol] == valBestInColCuda[iCol]);
-    //}
-
-    //assert(stBest.val == caBest.val);
-    //assert(stBest.p.x == caBest.p.x);
-    //assert(stBest.p.y == caBest.p.y);
-
-    //return stBest;
 #if 0
-    return _alignSingleThread(ctRow, ctCol, x, y, rowStart, row, valBestInRow, valBestInCol, sc);
+    vector<int> rowCopy;
+    for (int iCol = -1; iCol < ctCol; ++iCol) {
+        rowCopy.push_back(row[iCol]);
+    }
+    vector<int> valBestInColCopy;
+    for (int iCol = 0; iCol < ctCol; ++iCol) {
+        valBestInColCopy.push_back(valBestInCol[iCol]);
+    }
+    vector<int> valBestInRowCopy;
+    for (int iRow = 0; iRow < ctRow; ++iRow) {
+        valBestInRowCopy.push_back(valBestInRow[iRow]);
+    }
+
+    EndPoint caBest = ca._alignCuda(ctRow, ctCol, x - (rev ? xr.data() : this->x.data()), y - (rev ? yr.data() : this->y.data()),
+        rev, rowStart, row, valBestInRow, valBestInCol, sc);
+    //EndPoint caBest = mta._alignMultithreaded(ctRow, ctCol, x, y, rowStart, row, valBestInRow, valBestInCol, sc);
+
+    //return caBest;
+
+    vector<int> rowCuda;
+    for (int iCol = -1; iCol < ctCol; ++iCol) {
+        rowCuda.push_back(row[iCol]);
+    }
+    vector<int> valBestInColCuda;
+    for (int iCol = 0; iCol < ctCol; ++iCol) {
+        valBestInColCuda.push_back(valBestInCol[iCol]);
+    }
+
+    for (int iCol = -1; iCol < ctCol; ++iCol) {
+        row[iCol] = rowCopy[iCol+1];
+    }
+    for (int iCol = 0; iCol < ctCol; ++iCol) {
+        valBestInCol[iCol] = valBestInColCopy[iCol];
+    }
+    for (int iRow = 0; iRow < ctRow; ++iRow) {
+        valBestInRow[iRow] = valBestInRowCopy[iRow];
+    }
+
+    EndPoint stBest = _alignSingleThread(ctRow, ctCol, x, y, rowStart, row, valBestInRow, valBestInCol, sc);
+
+    for (int iCol = -1; iCol < ctCol; ++iCol) {
+        assert(row[iCol] == rowCuda[iCol+1]);
+    }
+    for (int iCol = 0; iCol < ctCol; ++iCol) {
+        assert(valBestInCol[iCol] == valBestInColCuda[iCol]);
+    }
+
+    assert(stBest.val == caBest.val);
+    assert(stBest.p.x == caBest.p.x);
+    assert(stBest.p.y == caBest.p.y);
+
+    return stBest;
+#else
+#if 0
+      return ca._alignCuda(ctRow, ctCol, x - (rev ? xr.data() : this->x.data()), y - (rev ? yr.data() : this->y.data()),
+          rev, rowStart, row, valBestInRow, valBestInCol, sc);
 #else
     if (ctRow < 32 || ctCol < 32) {
       return _alignSingleThread(ctRow, ctCol, x, y, rowStart, row, valBestInRow, valBestInCol, sc);
@@ -124,6 +127,7 @@ public:
     #else
         return mta._alignMultithreaded(ctRow, ctCol, x, y, rowStart, row, valBestInRow, valBestInCol, sc);
     #endif
+#endif
 #endif
   }
 
