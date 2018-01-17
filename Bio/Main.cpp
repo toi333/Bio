@@ -29,23 +29,27 @@ void test(const string &s1, const string &s2)
         cout << "VALIDATION FAILED!" << endl;
         cout << "Score should be: " << validationScore << endl;
         sol.output(cout, s1, s2);
+        cout << s1 << endl;
+        cout << s2 << endl;
     }
     cout << "Runtime algo:   " << runTimeAlg << endl;
 
-    //SquareAA algoSq;
-    ////int startSq = clock();
-    //Alignment sol2 = algoSq.align(s1, s2, sc);
-    ////float runTimeSq = (float)(clock() - startSq) / CLOCKS_PER_SEC;
+    SquareAA algoSq;
+    //int startSq = clock();
+    Alignment sol2 = algoSq.align(s1, s2, sc);
+    //float runTimeSq = (float)(clock() - startSq) / CLOCKS_PER_SEC;
 
-    ////cout << "Runtime square: " << runTimeSq << endl;
-    //if (sol.score != sol2.score) {
-    //    cout << "FAILED!" << endl;
-    //    cout << "H: " << sol.score << endl;
-    //    sol2.output(cout, s1, s2);
-    //} else {
-    //    cout << "OK!" << endl;
-    //}
-    cout << endl;
+    //cout << "Runtime square: " << runTimeSq << endl;
+    if (sol.score != sol2.score) {
+        cout << "FAILED!" << endl;
+        cout << "H: " << sol.score << endl;
+        sol2.output(cout, s1, s2);
+        cout << s1 << endl;
+        cout << s2 << endl;
+    } else {
+        cout << "OK!" << endl;
+    }
+    //cout << endl;
 }
 
 void test(const char *file, int i1, int i2)
@@ -97,18 +101,19 @@ int main()
   //test("res/test.fasta", 21, 22);
   //test("res/test.fasta", 23, 24);
   //test("res/test.fasta", 27, 27);
-  test("res/streptococcus_references.fasta", 0, 1);
+  //test("res/test.fasta", 28, 29);
+  //test("res/streptococcus_references.fasta", 0, 1);
 
-  //for (int l = 4; l < 1000; ++l) {
-  //    for (int t = 0; t < 50; ++t) {
-  //        string s1, s2;
-  //        for (int i = 0; i < l; ++i) {
-  //            s1.push_back("ACTG"[rand() % 4]);
-  //            s2.push_back("ACTG"[rand() % 4]);
-  //        }
-  //        test(s1, s1);
-  //    }
-  //}
+  for (int l = 10; l < 1000; ++l) {
+      for (int t = 0; t < 10; ++t) {
+          string s1, s2;
+          for (int i = 0; i < l; ++i) {
+              s1.push_back("ACTG"[rand() % 4]);
+              s2.push_back("ACTG"[rand() % 4]);
+          }
+          test(s1, s2);
+      }
+  }
 
   system("pause");
 }

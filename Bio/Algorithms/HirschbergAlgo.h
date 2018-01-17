@@ -298,7 +298,7 @@ public:
         alig.score = bestFwd.val;
       }
       if (bestFwd.val > 0) {
-        alignRec(iRow0, bestFwd.p.x - 1, iCol0, bestFwd.p.y - 1, false, false, row, valBestInRow, valBestInCol, sc, alig);
+        alignRec(iRow0, bestFwd.p.x - 1, iCol0, bestFwd.p.y - 1, gapStart, false, row, valBestInRow, valBestInCol, sc, alig);
       } else {
         assert(bestFwd.p.x == iRow0 && bestFwd.p.y == iCol0);
       }
@@ -313,7 +313,7 @@ public:
       }
       alig.matches.push_back(bestBak.p);
       if (bestBak.val > 0) {
-        alignRec(bestBak.p.x + 1, iRow1, bestBak.p.y + 1, iCol1, false, false, row, valBestInRow, valBestInCol, sc, alig);
+        alignRec(bestBak.p.x + 1, iRow1, bestBak.p.y + 1, iCol1, false, gapEnd, row, valBestInRow, valBestInCol, sc, alig);
       } else {
         assert(bestBak.p.x == iRow1 && bestBak.p.y == iCol1);
       }

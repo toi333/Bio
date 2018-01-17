@@ -28,12 +28,9 @@ __global__ void kernel(int iBlockRun, int blockRunProgress, int ctColPerThread, 
     iRow1 += dir;
     iCol1 += dir;
 
-    //const int iCol0T = iCol0 + (iCol1 - iCol0) * threadIdx.x / blockDim.x;
-    //const int iCol1T = iCol0 + (iCol1 - iCol0) * (threadIdx.x + 1) / blockDim.x;
-    //printf("%d %d %d %d %d %d\n", iCol0T, iCol1T, iCol1, iCol1 - iCol0, (iCol1 - iCol0) * (threadIdx.x + 1), (iCol1 - iCol0) * (threadIdx.x + 1) / blockDim.x);
-
-    const int iCol0T = iCol0 + dir * ctColPerThread * (iThread0 + (int)threadIdx.x);
-    const int iCol1T = iCol0 + dir * ctColPerThread * (iThread0 + (int)threadIdx.x + 1);
+    const int iThreadInGrid = iThread0 + threadIdx.x;
+    const int iCol0T = iCol0 + dir * ctColPerThread * iThreadInGrid;
+    const int iCol1T = iCol0 + dir * ctColPerThread * (iThreadInGrid + 1);
 
     EndPoint best;
     best.val = INT_MIN;
@@ -56,8 +53,6 @@ __global__ void kernel(int iBlockRun, int blockRunProgress, int ctColPerThread, 
 
     __syncthreads();
 
-    //printf("%d %d\n", iCol0T, iCol1T);
-
     if (dir * iRow0T < dir * iRow1) {
         for (int iCol = iCol0T; iCol != iCol1T; iCol += dir) {
             lrd[iCol].row = row[iCol];
@@ -68,14 +63,12 @@ __global__ void kernel(int iBlockRun, int blockRunProgress, int ctColPerThread, 
 
     __syncthreads();
 
-    //const bool cnd = iRow0 == 8 && iRow1 == 9;
-
     for (int iRow = iRow0T; iRow != iRow1T; iRow += dir) {
         if (dir * iRow0S <= dir * iRow && dir * iRow < dir * iRow1S) {
             int prevColRow = col[iRow - dir];
             // TODO: fix this
             const bool end = iRow == iRow1S - dir || iRow == iRow1S - dir;
-            int prevCol = end && threadIdx.x + iThread0 != 0 ? row[iCol0T - dir] : col[iRow];
+            int prevCol = end && iThreadInGrid != 0 ? row[iCol0T - dir] : col[iRow];
             int valBestInRowLocal = valBestInRow[iRow];
             char xLocal = x[iRow + rev];
             for (int iCol = iCol0T; iCol != iCol1T; iCol += dir) {
@@ -90,10 +83,6 @@ __global__ void kernel(int iBlockRun, int blockRunProgress, int ctColPerThread, 
 
                 //r = max(r, prevColRow + sc.match(ca->dX[iRow + rev], ca->dY[iCol + rev]));
                 r = max(r, prevColRow + (xLocal == lrd[iCol].y ? sc.mp : sc.mn));
-
-                //if (cnd) {
-                //    printf("%d %d %d %d %d\n", iCol, r, prevRow, prevColRow, prevCol);
-                //}
 
                 prevColRow = prevRow;
                 lrd[iCol].row = r;
@@ -117,28 +106,18 @@ __global__ void kernel(int iBlockRun, int blockRunProgress, int ctColPerThread, 
     }
 
     // TODO: beter init
-    if (iBlockRun == 0 || best.val > bests[iThread0 + threadIdx.x].val) {
-        bests[iThread0 + threadIdx.x] = best;
+    if (iBlockRun == 0 || best.val > bests[iThreadInGrid].val) {
+        bests[iThreadInGrid] = best;
     }
-}
+} 
 
 int callKernel(bool rev, int iRow0, int iRow1, int iCol0, int iCol1, int defVal, CudaAligner *ca, const Scoring &sc)
 {
-    //const int ctCol = abs(iCol1 - iCol0) + 1;
-    //int ctThread = min(1024, ctCol);
-    //const int ctColPerThread = ctCol / ctThread;
-    //const int ctColExtra = ctCol - ctColPerThread * ctThread;
-    //kernel<<<1, ctThread>>>(ctColPerThread, ctColExtra, rev, iRow0, iRow1, iCol0, iCol1, defVal,
-    //    ca->dRow, ca->dCol, ca->dValBestInRow, ca->dValBestInCol, ca->dX, ca->dY, ca->dBest, sc);
-    //return ctThread;
-
     const int ctColPerThread = 4;
     const int ctThreadPerFullBlock = 1024;
     const int blockRunProgress = 1024;
 
     const int ctCol = abs(iCol1 - iCol0) + 1;
-
-    //const int ctColPerFullBlock = ctThreadPerFullBlock * ctColPerThread;
 
     const int ctTotalThreads = (ctCol + ctColPerThread - 1) / ctColPerThread;
 
