@@ -122,6 +122,6 @@
     <Property Name="ExtensionsToSynchronize" Value="*;" />
     <Property Name="ProfileOptionEnableKernelCaptureLimits" Value="True" />
     <Property Name="ProfileOptionEnableKernelCounter" Value="True" />
-    <Property Name="ProfileOptionKernelCounterValue" Value="2" />
+    <Property Name="ProfileOptionKernelCounterValue" Value="100" />
     <Property Name="WorkingDirectory" Value="C:\Projects\bio\Bio\Bio\" />
 </Model>

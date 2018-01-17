@@ -34,20 +34,14 @@ __global__ void kernel(int iBlock0, int iBlockRun, int blockRunProgress, int ctC
     best.val = INT_MIN;
     best.p = Vec2i{ -1, -1 };
 
-    const int blockOffset = blockRunProgress * (iBlockRun - iBlock) - iBlock;
+    const int blockOffset = blockRunProgress * (iBlockRun - iBlock) - iBlock - iBlock * 2 * ((int)blockDim.x - 1);
 
-    const int iRow0B = blockOffset;
-    const int iRow1B = iRow0B + blockRunProgress;
+    const int threadCurRowOffset = -2 * (int)threadIdx.x;
 
-    const int threadRowProgress = 1;
-    const int threadCurRowOffset = threadRowProgress * (-(int)threadIdx.x) - (int)threadIdx.x;
-    const int lastThreadCurRowOffset = threadRowProgress * (-((int)blockDim.x - 1)) - ((int)blockDim.x - 1);
+    const int iRow0T = blockOffset + threadCurRowOffset;
+    const int iRow1T = blockOffset + blockRunProgress + threadCurRowOffset;
 
-    const int iRow0T = iRow0B + threadCurRowOffset;
-    const int iRow1T = iRow1B + threadCurRowOffset - lastThreadCurRowOffset;
-
-    const int iRow0S = max(0, iRow0B);
-    const int iRow1S = min(ctRow, iRow1B);
+    const int iRow1S = min(iRow1T, ctRow);
     
     __syncthreads();
 
@@ -62,11 +56,10 @@ __global__ void kernel(int iBlock0, int iBlockRun, int blockRunProgress, int ctC
     __syncthreads();
 
     for (int iRow = iRow0T; iRow != iRow1T; ++iRow) {
-        if (iRow0S <= iRow && iRow < iRow1S) {
+        if (0 <= iRow && iRow < ctRow) {
             int prevColRow = col[iRow - 1];
             // TODO: fix this
-            //int prevCol = iRow == iRow1S - 1 && iThreadInGrid != 0 ? row[iCol0T - 1] : col[iRow];
-            int prevCol = iRow == ctRow - 1 && iThreadInGrid != 0 || iRow == iRow1B - 1 && threadIdx.x != 0 ? row[iCol0T - 1] : col[iRow];
+            int prevCol = iRow == ctRow - 1 && iThreadInGrid != 0 ? row[iCol0T - 1] : col[iRow];
             int valBestInRowLocal = valBestInRow[iRow];
             char xLocal = x[iRow];
             for (int iCol = iCol0T; iCol < iCol1T; ++iCol) {
@@ -123,12 +116,16 @@ int callKernel(int ctRow, int ctCol, char *x, char *y, int defVal, CudaAligner *
 
     const int ctColR = ctBlocks * ctThreadsPerBlock * ctColPerThread;
 
+    const int iLastThreadInBlock = ctThreadsPerBlock - 1;
     const int iLastBlock = ctBlocks - 1;
 
-    const int ctBlockRuns = ((ctRow + iLastBlock) + blockRunProgress - 1) / blockRunProgress + iLastBlock;
+    const int lastThreadOffset = 2 * iLastThreadInBlock;
+
+    const int ctBlockRuns = (ctRow + blockRunProgress * iLastBlock + iLastBlock + iLastBlock * 2 * iLastThreadInBlock + 2 * iLastThreadInBlock + blockRunProgress - 1) / blockRunProgress;
 
     for (int iBlockRun = 0; iBlockRun < ctBlockRuns; ++iBlockRun) {
-        const int iBlock0 = min(max(0, (blockRunProgress * iBlockRun - ctRow) / (blockRunProgress + 1)), ctBlocks - 1);
+        //const int iBlock0 = min(max(0, (blockRunProgress * iBlockRun - ctRow) / (blockRunProgress + 1)), ctBlocks - 1);
+        const int iBlock0 = 0;
         //const int iBlock1 = min(max(0, (blockRunProgress * (iBlockRun + 2)) / (blockRunProgress + 1)), ctBlocks - 1);
         const int iBlock1 = ctBlocks - 1;
 
