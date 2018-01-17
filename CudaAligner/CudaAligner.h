@@ -5,10 +5,11 @@
 class CudaAligner
 {
 public:
-    EndPoint _alignCuda(bool rev, int iRow0, int iRow1, int iCol0, int iCol1, int rowStart, int *row,
-        vector<int> &valBestInRow, vector<int> &valBestInCol, const vector<char> &x, const vector<char> &y, const Scoring &sc);
+    EndPoint _alignCuda(int ctRow, int ctCol, int iX, int iY, bool rev, int rowStart, int *row,
+        vector<int> &valBestInRow, vector<int> &valBestInCol, const Scoring &sc);
 
-    void init(int ctRow, const vector<char> &x, int ctCol, const vector<char> &y);
+    void init(int ctRow, const vector<char> &x, const vector<char> &xr,
+        int ctCol, const vector<char> &y, const vector<char> &yr);
 
     void destroy();
 
@@ -20,10 +21,16 @@ public:
     // device memory
     int *_dRow;
     int *dRow;
+    int *_dCol;
     int *dCol;
+    char *_dX;
     char *dX;
+    char *_dXr;
+    char *dXr;
     char *_dY;
     char *dY;
+    char *_dYr;
+    char *dYr;
     int *dValBestInRow;
     int *_dValBestInCol;
     int *dValBestInCol;

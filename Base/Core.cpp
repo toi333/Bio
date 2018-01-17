@@ -19,12 +19,11 @@ void init()
 vector<char> encode(const string &a)
 {
   vector<char> x;
-  x.resize(a.size() + 2);
+  x.resize(a.size() + 1);
   x[0] = 4;
   for (int i = 0; i < (int)a.size(); ++i) {
     x[i + 1] = nidToIdx[a[i]];
   }
-  x[a.size() + 1] = 4;
   return x;
 }
 
