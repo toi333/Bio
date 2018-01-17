@@ -84,7 +84,7 @@ int main()
 
   init();
 
-#if 0
+#if 1
   test("res/test.fasta", 0, 0);
   test("res/test.fasta", 0, 1);
   test("res/test.fasta", 0, 2);
@@ -115,7 +115,7 @@ int main()
   test("res/test.fasta", 44, 45);
 #endif
 
-#if 1
+#if 0
   test("res/streptococcus_references.fasta", 0, 1);
 #endif
 
@@ -132,5 +132,10 @@ int main()
   }
 #endif
 
+#ifndef __linux__
   system("pause");
+
+#endif
+
+  return 0;
 }

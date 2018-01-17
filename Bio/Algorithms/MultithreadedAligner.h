@@ -21,24 +21,62 @@ public:
       char y;
     };
 
-    vector<ThreadData> tds;
+    ThreadData() {}
+    ThreadData(const ThreadData &td) {}
+    vector<int> _col;
+    int *col;
+    vector<RowData> localRowData;
+    atomic<int> iRow;
+    EndPoint best;
+    function<void(void)> f = nullptr;
+    atomic<int> go{false};
+    atomic<int> die{false}; 
 
-    vector<thread> ts;
+  };
 
-    EndPoint _alignMultithreaded(bool rev, int iRow0, int iRow1, int iCol0, int iCol1, int rowStart, int *row,
-        vector<int> &valBestInRow, vector<int> &valBestInCol, const vector<char> &x, const vector<char> &y, const Scoring &sc)
-    {
-      const int dir = rev ? -1 : 1;
-      tds[0].col[iRow0 - dir] = row[iCol0 - dir];
-      for (int iRow = iRow0; iRow != iRow1 + dir; iRow += dir) {
-        tds[0].col[iRow] = rowStart;
-      }
-      tds[0].iRow = iRow1;
+  vector<ThreadData> tds;
 
-      for (int iThread = 1; iThread <= ctThreads; ++iThread) {
-        tds[iThread].iRow = iRow0 - dir;
-        tds[iThread].best = EndPoint{};
-      }
+  vector<thread> ts;
+
+  EndPoint _alignMultithreaded(int ctRow, int ctCol, const char *x, const char *y, int rowStart,
+      int *row, vector<int> &valBestInRow, vector<int> &valBestInCol, const Scoring &sc)
+  {
+    const int ctThreads = min(ctMaxThreads, ctCol);
+
+    tds[0].col[-1] = row[-1];
+    for (int iRow = 0; iRow < ctRow; ++iRow) {
+      tds[0].col[iRow] = rowStart;
+    }
+    tds[0].iRow = ctRow - 1;
+
+    for (int iThread = 1; iThread <= ctThreads; ++iThread) {
+      tds[iThread].iRow = -1;
+      tds[iThread].best = EndPoint{};
+    }
+
+    for (int iThread = 1; iThread <= ctThreads; ++iThread) {
+      tds[iThread].f = [iThread, ctThreads, ctRow, ctCol,
+        rowStart, row, &valBestInRow, &valBestInCol, x, y, &sc, this]()
+      {
+        const Scoring scLocal = sc;
+        EndPoint best;
+        int iThCol0 = ctCol * (iThread - 1) / ctThreads;
+        int iThCol1 = ctCol * iThread / ctThreads;
+
+        auto *localRowData = tds[iThread].localRowData.data();
+        for (int iCol = iThCol0; iCol < iThCol1; ++iCol) {
+          localRowData[iCol].row = row[iCol];
+          localRowData[iCol].valBestInCol = valBestInCol[iCol];
+          localRowData[iCol].y = y[iCol];
+        }
+        tds[iThread].col[-1] = row[iThCol1 - 1];
+
+        for (int iRow = 0; iRow < ctRow; ++iRow) {
+          while (tds[iThread - 1].iRow < iRow) {
+            this_thread::yield();
+          }
+          int prevColRow = tds[iThread - 1].col[iRow - 1];
+          int prevCol = tds[iThread - 1].col[iRow];
 
           const char xLocal = x[iRow];
           int valBestInRowLocal = valBestInRow[iRow];
@@ -71,9 +109,23 @@ public:
           row[iCol] = localRowData[iCol].row;
           valBestInCol[iCol] = localRowData[iCol].valBestInCol;
         }
-        r.Add(tds[iThread].best);
+        tds[iThread].best.Add(best);
+      };
+      tds[iThread].go = 1;
+    }
+    EndPoint r;
+    for (int iThread = 1; iThread <= ctThreads; ++iThread) {
+      while (tds[iThread].go) {
+        this_thread::yield();
+      }
+      const EndPoint &b = tds[iThread].best;
+      if (b.val > r.val || b.val == r.val &&
+          (b.p.x < r.p.x || b.p.x == r.p.x && b.p.y < r.p.y)) {
+          r = b;
       }
     }
+    return r;
+  }
 
   void init(int ctRow, int ctCol)
   {
@@ -92,13 +144,13 @@ public:
           if (tds[iThread].go) {
             tds[iThread].f();
             tds[iThread].go = 0;
-            } else {
+          } else {
             this_thread::yield();
-            }
-            }
-            });
-      }
+          }
+        }
+      });
     }
+  }
 
   void destroy()
   {
@@ -108,4 +160,5 @@ public:
     for (int iThread = 1; iThread <= ctMaxThreads; ++iThread) {
       ts[iThread].join();
     }
+  }
 };
