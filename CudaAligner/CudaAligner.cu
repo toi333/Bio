@@ -6,6 +6,8 @@
 
 #include <Base/Core.h>
 
+#include <iostream>
+
 struct LocalRowData
 {
     int y;
@@ -121,8 +123,10 @@ int callKernel(int ctRow, int ctCol, char *x, char *y, int defVal, CudaAligner *
 
     const int iLastBlock = ctBlocks - 1;
 
+    //(int)blockIdx.x > (blockRunProgress * iBlockRun - ctRow) / (blockRunProgress + 1)
+
     // TODO: ctColR vs ctCol ??
-    const int ctBlockRuns = ((ctColR + iLastBlock) + blockRunProgress - 1) / blockRunProgress + iLastBlock;
+    const int ctBlockRuns = ((ctRow + iLastBlock) + blockRunProgress - 1) / blockRunProgress + iLastBlock;
 
     for (int iBlockRun = 0; iBlockRun < ctBlockRuns; ++iBlockRun) {
         kernel<<<ctBlocks, ctThreadsPerBlock, ctThreadPerFullBlock * ctColPerThread  * sizeof(LocalRowData)>>>(
